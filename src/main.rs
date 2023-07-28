@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 mod syntax;
-use syntax::{Copat, Decl, Expr, Lit, Modul, Pat};
+use syntax::{Lit, Modul, Name, Pat};
 
 mod parsing;
 
@@ -17,229 +17,228 @@ fn compare_output<T: Debug + Display>(x: &T) {
 }
 
 fn main() {
-    let ex1 = Copat::This(Pat::Var("self"));
+    let ex1 = Name::id("self").bind().this();
     compare_output(&ex1);
 
-    let hello = Expr::Const(Lit::Str(String::from("Hello, world!")));
-    let ex2 = Expr::App(&Expr::Var("print"), &hello);
+    let ex2 = Name::id("print")
+        .refer()
+        .app(Lit::Str("Hello, world!".to_string()).cnst());
     compare_output(&ex2);
 
-    let ex3 = Decl::Method(
-        Copat::App(&Copat::This(Pat::Var("inc")), Pat::Var("x")),
-        Expr::App(
-            &Expr::App(&Expr::Var("plus"), &Expr::Var("x")),
-            &Expr::Const(Lit::Int(1)),
-        ),
-    );
+    let ex3 = Name::id("inc")
+        .bind()
+        .this()
+        .app(Name::id("plus").bind())
+        .goes_to(
+            Name::id("plus")
+                .refer()
+                .app(Name::id("x").refer())
+                .app(Lit::Int(1).cnst()),
+        );
     compare_output(&ex3);
 
-    let ex4 = Modul {
-        defns: &[
-            Decl::Include(Expr::Const(Lit::Sym("Math"))),
-            Decl::Method(Copat::This(Pat::Var("pi")), Expr::Const(Lit::Flt(PI))),
-            Decl::Method(
-                Copat::App(&Copat::This(Pat::Var("area")), Pat::Var("r")),
-                Expr::App(
-                    &Expr::App(&Expr::Var("times"), &Expr::Var("pi")),
-                    &Expr::App(
-                        &Expr::App(
-                            &Expr::Dot(&Expr::Const(Lit::Sym("Math")), Lit::Sym("Exp")),
-                            &Expr::Var("r"),
-                        ),
-                        &Expr::Const(Lit::Int(2)),
+    let ex4 = Modul::top()
+        .then(Name::id("Math").refer().included())
+        .then(Name::id("pi").bind().this().goes_to(Lit::Flt(PI).cnst()))
+        .then(
+            Name::id("area")
+                .bind()
+                .this()
+                .app(Name::id("r").bind())
+                .goes_to(
+                    Name::id("times").refer().app(Name::id("pi").refer()).app(
+                        Name::id("Math")
+                            .sym()
+                            .cnst()
+                            .dot(Name::id("exp").sym())
+                            .app(Name::id("r").refer())
+                            .app(Lit::Int(2).cnst()),
                     ),
                 ),
-            ),
-        ],
-    };
+        );
+
     compare_output(&ex4);
 
-    let ex5 = Modul {
-        defns: &[
-            Decl::Method(
-                Copat::App(&Copat::This(Pat::Var("fact")), Pat::Const(Lit::Int(0))),
-                Expr::Const(Lit::Int(1)),
-            ),
-            Decl::Method(
-                Copat::App(&Copat::This(Pat::Var("fact")), Pat::Var("n")),
-                Expr::App(
-                    &Expr::App(&Expr::Var("times"), &Expr::Var("n")),
-                    &Expr::App(
-                        &Expr::Var("fact"),
-                        &Expr::App(
-                            &Expr::App(&Expr::Var("minus"), &Expr::Var("n")),
-                            &Expr::Const(Lit::Int(1)),
+    let ex5 = Modul::top()
+        .then(
+            Name::id("fact")
+                .bind()
+                .this()
+                .app(Lit::Int(0).mtch())
+                .goes_to(Lit::Int(1).cnst()),
+        )
+        .then(
+            Name::id("fact")
+                .bind()
+                .this()
+                .app(Name::id("n").bind())
+                .goes_to(
+                    Name::id("times").refer().app(Name::id("n").refer()).app(
+                        Name::id("fact").refer().app(
+                            Name::id("minus")
+                                .refer()
+                                .app(Name::id("n").refer())
+                                .app(Lit::Int(1).cnst()),
                         ),
                     ),
                 ),
-            ),
-        ],
-    };
+        );
+
     compare_output(&ex5);
 
-    let ex6 = Modul {
-        defns: &[
-            Decl::Method(
-                Copat::Dot(&Copat::This(Pat::Var("zeroes")), Lit::Sym("Head")),
-                Expr::Const(Lit::Int(0)),
-            ),
-            Decl::Method(
-                Copat::Dot(&Copat::This(Pat::Var("zeroes")), Lit::Sym("Tail")),
-                Expr::Var("zeroes"),
-            ),
-        ],
-    };
+    let ex6 = Modul::top()
+        .then(
+            Name::id("zeroes")
+                .bind()
+                .this()
+                .dot(Name::id("Head").sym())
+                .goes_to(Lit::Int(0).cnst()),
+        )
+        .then(
+            Name::id("zeroes")
+                .bind()
+                .this()
+                .dot(Name::id("Tail").sym())
+                .goes_to(Name::id("zeroes").refer()),
+        );
+
     compare_output(&ex6);
 
-    let ex7 = Modul {
-        defns: &[
-            Decl::Method(
-                Copat::Dot(
-                    &Copat::App(&Copat::This(Pat::Var("stutter")), Pat::Var("n")),
-                    Lit::Sym("Head"),
-                ),
-                Expr::Var("n"),
-            ),
-            Decl::Method(
-                Copat::Dot(
-                    &Copat::Dot(
-                        &Copat::App(&Copat::This(Pat::Var("stutter")), Pat::Var("n")),
-                        Lit::Sym("Tail"),
+    let ex7 = Modul::top()
+        .then(
+            Name::id("stutter")
+                .bind()
+                .this()
+                .app(Name::id("n").bind())
+                .dot(Name::id("Head").sym())
+                .goes_to(Name::id("n").refer()),
+        )
+        .then(
+            Name::id("stutter")
+                .bind()
+                .this()
+                .app(Name::id("n").bind())
+                .dot(Name::id("Tail").sym())
+                .dot(Name::id("Head").sym())
+                .goes_to(Name::id("n").refer()),
+        )
+        .then(
+            Name::id("stutter")
+                .bind()
+                .this()
+                .app(Name::id("n").bind())
+                .dot(Name::id("Tail").sym())
+                .dot(Name::id("Tail").sym())
+                .goes_to(
+                    Name::id("stutter").refer().app(
+                        Name::id("plus")
+                            .refer()
+                            .app(Name::id("n").refer())
+                            .app(Lit::Int(1).cnst()),
                     ),
-                    Lit::Sym("Head"),
                 ),
-                Expr::Var("n"),
-            ),
-            Decl::Method(
-                Copat::Dot(
-                    &Copat::Dot(
-                        &Copat::App(&Copat::This(Pat::Var("stutter")), Pat::Var("n")),
-                        Lit::Sym("Tail"),
-                    ),
-                    Lit::Sym("Tail"),
-                ),
-                Expr::App(
-                    &Expr::Var("stutter"),
-                    &Expr::App(
-                        &Expr::App(&Expr::Var("plus"), &Expr::Var("n")),
-                        &Expr::Const(Lit::Int(1)),
-                    ),
-                ),
-            ),
-        ],
-    };
+        );
+
     compare_output(&ex7);
 
-    let ex8 = Modul {
-        defns: &[
-            Decl::Method(
-                Copat::Dot(
-                    &Copat::App(
-                        &Copat::App(&Copat::This(Pat::Var("zigzag")), Pat::Var("e")),
-                        Pat::Var("o"),
-                    ),
-                    Lit::Sym("Head"),
+    let ex8 = Modul::top()
+        .then(
+            Name::id("zigzag")
+                .bind()
+                .this()
+                .app(Name::id("e").bind())
+                .app(Name::id("o").bind())
+                .dot(Name::id("Head").sym())
+                .goes_to(Name::id("e").refer().dot(Name::id("Head").sym())),
+        )
+        .then(
+            Name::id("zigzag")
+                .bind()
+                .this()
+                .app(Name::id("e").bind())
+                .app(Name::id("o").bind())
+                .dot(Name::id("Tail").sym())
+                .dot(Name::id("Head").sym())
+                .goes_to(Name::id("o").refer().dot(Name::id("Head").sym())),
+        )
+        .then(
+            Name::id("zigzag")
+                .bind()
+                .this()
+                .app(Name::id("e").bind())
+                .app(Name::id("o").bind())
+                .dot(Name::id("Tail").sym())
+                .dot(Name::id("Tail").sym())
+                .goes_to(
+                    Name::id("zigzag")
+                        .refer()
+                        .app(Name::id("e").refer().dot(Name::id("Tail").sym()))
+                        .app(Name::id("o").refer().dot(Name::id("Tail").sym())),
                 ),
-                Expr::Dot(&Expr::Var("e"), Lit::Sym("Head")),
-            ),
-            Decl::Method(
-                Copat::Dot(
-                    &Copat::Dot(
-                        &Copat::App(
-                            &Copat::App(&Copat::This(Pat::Var("zigzag")), Pat::Var("e")),
-                            Pat::Var("o"),
-                        ),
-                        Lit::Sym("Tail"),
-                    ),
-                    Lit::Sym("Head"),
-                ),
-                Expr::Dot(&Expr::Var("o"), Lit::Sym("Head")),
-            ),
-            Decl::Method(
-                Copat::Dot(
-                    &Copat::Dot(
-                        &Copat::App(
-                            &Copat::App(&Copat::This(Pat::Var("zigzag")), Pat::Var("e")),
-                            Pat::Var("o"),
-                        ),
-                        Lit::Sym("Tail"),
-                    ),
-                    Lit::Sym("Tail"),
-                ),
-                Expr::App(
-                    &Expr::App(
-                        &Expr::Var("zigzag"),
-                        &Expr::Dot(&Expr::Var("e"), Lit::Sym("Tail")),
-                    ),
-                    &Expr::Dot(&Expr::Var("o"), Lit::Sym("Tail")),
-                ),
-            ),
-        ],
-    };
+        );
+
     compare_output(&ex8);
 
-    let ex9 = Modul {
-        defns: &[
-            Decl::Method(
-                Copat::App(
-                    &Copat::App(&Copat::This(Pat::Var("and")), Pat::Const(Lit::Sym("True"))),
-                    Pat::Const(Lit::Sym("True")),
-                ),
-                Expr::Const(Lit::Sym("True")),
-            ),
-            Decl::Method(
-                Copat::App(
-                    &Copat::App(&Copat::This(Pat::Var("and")), Pat::Unused),
-                    Pat::Unused,
-                ),
-                Expr::Const(Lit::Sym("False")),
-            ),
-        ],
-    };
+    let ex9 = Modul::top()
+        .then(
+            Name::id("and")
+                .bind()
+                .this()
+                .app(Name::id("True").sym().mtch())
+                .app(Name::id("True").sym().mtch())
+                .goes_to(Name::id("True").sym().cnst()),
+        )
+        .then(
+            Name::id("and")
+                .bind()
+                .this()
+                .app(Pat::Unused)
+                .app(Pat::Unused)
+                .goes_to(Name::id("False").sym().cnst()),
+        );
+
     compare_output(&ex9);
 
-    let ex10 = Modul {
-        defns: &[
-            Decl::Method(
-                Copat::Dot(
-                    &Copat::This(Pat::App(&Pat::Const(Lit::Sym("Num")), &Pat::Var("n"))),
-                    Lit::Sym("Eval"),
+    let ex10 = Modul::top()
+        .then(
+            Name::id("Num")
+                .sym()
+                .mtch()
+                .app(Name::id("n").bind())
+                .this()
+                .dot(Name::id("Eval").sym())
+                .goes_to(Name::id("n").refer()),
+        )
+        .then(
+            Name::id("Add")
+                .sym()
+                .mtch()
+                .app(Name::id("l").bind())
+                .app(Name::id("r").bind())
+                .this()
+                .dot(Name::id("Eval").sym())
+                .goes_to(
+                    Name::id("plus")
+                        .refer()
+                        .app(Name::id("l").refer().dot(Name::id("Eval").sym()))
+                        .app(Name::id("r").refer().dot(Name::id("Eval").sym())),
                 ),
-                Expr::Var("n"),
-            ),
-            Decl::Method(
-                Copat::Dot(
-                    &Copat::This(Pat::App(
-                        &Pat::App(&Pat::Const(Lit::Sym("Add")), &Pat::Var("l")),
-                        &Pat::Var("r"),
-                    )),
-                    Lit::Sym("Eval"),
+        )
+        .then(
+            Name::id("mul")
+                .sym()
+                .mtch()
+                .app(Name::id("l").bind())
+                .app(Name::id("r").bind())
+                .this()
+                .dot(Name::id("Eval").sym())
+                .goes_to(
+                    Name::id("times")
+                        .refer()
+                        .app(Name::id("l").refer().dot(Name::id("Eval").sym()))
+                        .app(Name::id("r").refer().dot(Name::id("Eval").sym())),
                 ),
-                Expr::App(
-                    &Expr::App(
-                        &Expr::Var("plus"),
-                        &Expr::Dot(&Expr::Var("l"), Lit::Sym("Eval")),
-                    ),
-                    &Expr::Dot(&Expr::Var("r"), Lit::Sym("Eval")),
-                ),
-            ),
-            Decl::Method(
-                Copat::Dot(
-                    &Copat::This(Pat::App(
-                        &Pat::App(&Pat::Const(Lit::Sym("Mul")), &Pat::Var("l")),
-                        &Pat::Var("r"),
-                    )),
-                    Lit::Sym("Eval"),
-                ),
-                Expr::App(
-                    &Expr::App(
-                        &Expr::Var("times"),
-                        &Expr::Dot(&Expr::Var("l"), Lit::Sym("Eval")),
-                    ),
-                    &Expr::Dot(&Expr::Var("r"), Lit::Sym("Eval")),
-                ),
-            ),
-        ],
-    };
+        );
+
     compare_output(&ex10);
 }

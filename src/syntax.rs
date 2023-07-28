@@ -1,16 +1,59 @@
 use std::fmt;
 
-pub type Name<'a> = &'a str;
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Name {
+    pub id: String,
+}
+
+impl Name {
+    pub fn id<'a>(s: &'a str) -> Name {
+        Name { id: s.to_string() }
+    }
+
+    pub fn sym(self) -> Lit {
+        Lit::Sym(self)
+    }
+
+    pub fn refer(self) -> Expr {
+        Expr::Var(self)
+    }
+
+    pub fn bind(self) -> Pat {
+        Pat::Var(self)
+    }
+}
+
+impl fmt::Display for Name {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.id)
+    }
+}
 
 // Modul ::= Decl_1 \n Decl_2 \n ... \n Decl_n
 #[derive(Debug)]
-pub struct Modul<'a> {
-    pub defns: &'a [Decl<'a>],
+pub struct Modul {
+    pub defns: Vec<Decl>,
 }
 
-impl<'a> fmt::Display for Modul<'a> {
+impl Modul {
+    pub fn top() -> Modul {
+        Modul { defns: Vec::new() }
+    }
+
+    pub fn then(mut self, decl: Decl) -> Modul {
+        self.defns.push(decl);
+        self
+    }
+
+    pub fn followed_by(mut self, more: Modul) -> Modul {
+        self.defns.extend(more.defns);
+        self
+    }
+}
+
+impl fmt::Display for Modul {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for d in self.defns {
+        for d in &self.defns {
             writeln!(f, "{}", d)?;
         }
         Ok(())
@@ -20,12 +63,12 @@ impl<'a> fmt::Display for Modul<'a> {
 // Decl ::= include Expr
 //        | Copat = Expr
 #[derive(Debug)]
-pub enum Decl<'a> {
-    Include(Expr<'a>),
-    Method(Copat<'a>, Expr<'a>),
+pub enum Decl {
+    Include(Expr),
+    Method(Copat, Expr),
 }
 
-impl<'a> fmt::Display for Decl<'a> {
+impl fmt::Display for Decl {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Decl::Include(e) => write!(f, "include {}", e),
@@ -41,14 +84,28 @@ impl<'a> fmt::Display for Decl<'a> {
 //        | Expr(Expr)
 //        | Expr.Lit
 #[derive(Debug)]
-pub enum Expr<'a> {
-    Var(Name<'a>),
-    Const(Lit<'a>),
-    App(&'a Expr<'a>, &'a Expr<'a>),
-    Dot(&'a Expr<'a>, Lit<'a>),
+pub enum Expr {
+    Var(Name),
+    Const(Lit),
+    App(Box<Expr>, Box<Expr>),
+    Dot(Box<Expr>, Lit),
 }
 
-impl<'a> fmt::Display for Expr<'a> {
+impl Expr {
+    pub fn app(self, arg: Expr) -> Expr {
+        Expr::App(Box::new(self), Box::new(arg))
+    }
+
+    pub fn dot(self, field: Lit) -> Expr {
+        Expr::Dot(Box::new(self), field)
+    }
+
+    pub fn included(self) -> Decl {
+        Decl::Include(self)
+    }
+}
+
+impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Expr::Var(x) => write!(f, "{}", x),
@@ -66,14 +123,24 @@ impl<'a> fmt::Display for Expr<'a> {
 
 // Lit ::= Int | Flt | Str | Sym
 #[derive(Debug)]
-pub enum Lit<'a> {
+pub enum Lit {
     Int(i64),
     Flt(f64),
     Str(String),
-    Sym(Name<'a>),
+    Sym(Name),
 }
 
-impl<'a> fmt::Display for Lit<'a> {
+impl Lit {
+    pub fn cnst(self) -> Expr {
+        Expr::Const(self)
+    }
+
+    pub fn mtch(self) -> Pat {
+        Pat::Const(self)
+    }
+}
+
+impl<'a> fmt::Display for Lit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Lit::Int(i) => write!(f, "{}", i),
@@ -88,13 +155,27 @@ impl<'a> fmt::Display for Lit<'a> {
 //         | Copat(Pat)
 //         | Copat.Lit
 #[derive(Debug)]
-pub enum Copat<'a> {
-    This(Pat<'a>),
-    App(&'a Copat<'a>, Pat<'a>),
-    Dot(&'a Copat<'a>, Lit<'a>),
+pub enum Copat {
+    This(Pat),
+    App(Box<Copat>, Pat),
+    Dot(Box<Copat>, Lit),
 }
 
-impl<'a> fmt::Display for Copat<'a> {
+impl Copat {
+    pub fn goes_to(self, rhs: Expr) -> Decl {
+        Decl::Method(self, rhs)
+    }
+
+    pub fn app(self, arg: Pat) -> Copat {
+        Copat::App(Box::new(self), arg)
+    }
+
+    pub fn dot(self, field: Lit) -> Copat {
+        Copat::Dot(Box::new(self), field)
+    }
+}
+
+impl fmt::Display for Copat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Copat::This(p) => write!(f, "{}", p),
@@ -109,14 +190,24 @@ impl<'a> fmt::Display for Copat<'a> {
 //       | Lit
 //       | Pat(Pat)
 #[derive(Debug)]
-pub enum Pat<'a> {
+pub enum Pat {
     Unused,
-    Var(Name<'a>),
-    Const(Lit<'a>),
-    App(&'a Pat<'a>, &'a Pat<'a>),
+    Var(Name),
+    Const(Lit),
+    App(Box<Pat>, Box<Pat>),
 }
 
-impl<'a> fmt::Display for Pat<'a> {
+impl Pat {
+    pub fn this(self) -> Copat {
+        Copat::This(self)
+    }
+
+    pub fn app(self, arg: Pat) -> Pat {
+        Pat::App(Box::new(self), Box::new(arg))
+    }
+}
+
+impl fmt::Display for Pat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Pat::Unused => write!(f, "_"),
