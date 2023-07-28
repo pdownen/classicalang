@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 mod syntax;
-use syntax::{Lit, Modul, Name, Pat};
+use syntax::nested::{Lit, Modul, Name, Pat};
 
 mod parsing;
 

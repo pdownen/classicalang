@@ -6,7 +6,7 @@ pub struct Name {
 }
 
 impl Name {
-    pub fn id<'a>(s: &'a str) -> Name {
+    pub fn id(s: &str) -> Name {
         Name { id: s.to_string() }
     }
 
@@ -140,7 +140,7 @@ impl Lit {
     }
 }
 
-impl<'a> fmt::Display for Lit {
+impl fmt::Display for Lit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Lit::Int(i) => write!(f, "{}", i),
