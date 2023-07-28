@@ -1,9 +1,12 @@
+#![allow(dead_code)]
+
 mod syntax;
+use syntax::{Copat, Decl, Expr, Lit, Modul, Pat};
+
+mod parsing;
 
 use std::f64::consts::PI;
 use std::fmt::{Debug, Display};
-
-use syntax::{Copat, Decl, Expr, Lit, Modul, Pat};
 
 fn compare_output<T: Debug + Display>(x: &T) {
     println!("----------");
