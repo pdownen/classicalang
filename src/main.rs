@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 mod syntax;
-use syntax::nested::{Lit, Modul, Name, Pat};
+use syntax::sequential::{Lit, Modul, Name, Pat};
 
 mod parsing;
 
@@ -22,7 +22,7 @@ fn main() {
 
     let ex2 = Name::id("print")
         .refer()
-        .app(Lit::Str("Hello, world!".to_string()).cnst());
+        .app(Lit::str("Hello, world!".to_string()).cnst());
     compare_output(&ex2);
 
     let ex3 = Name::id("inc")
@@ -33,13 +33,13 @@ fn main() {
             Name::id("plus")
                 .refer()
                 .app(Name::id("x").refer())
-                .app(Lit::Int(1).cnst()),
+                .app(Lit::int(1).cnst()),
         );
     compare_output(&ex3);
 
     let ex4 = Modul::top()
         .then(Name::id("Math").refer().included())
-        .then(Name::id("pi").bind().this().goes_to(Lit::Flt(PI).cnst()))
+        .then(Name::id("pi").bind().this().goes_to(Lit::flt(PI).cnst()))
         .then(
             Name::id("area")
                 .bind()
@@ -52,7 +52,7 @@ fn main() {
                             .cnst()
                             .dot(Name::id("exp").sym())
                             .app(Name::id("r").refer())
-                            .app(Lit::Int(2).cnst()),
+                            .app(Lit::int(2).cnst()),
                     ),
                 ),
         );
@@ -64,8 +64,8 @@ fn main() {
             Name::id("fact")
                 .bind()
                 .this()
-                .app(Lit::Int(0).mtch())
-                .goes_to(Lit::Int(1).cnst()),
+                .app(Lit::int(0).mtch())
+                .goes_to(Lit::int(1).cnst()),
         )
         .then(
             Name::id("fact")
@@ -78,7 +78,7 @@ fn main() {
                             Name::id("minus")
                                 .refer()
                                 .app(Name::id("n").refer())
-                                .app(Lit::Int(1).cnst()),
+                                .app(Lit::int(1).cnst()),
                         ),
                     ),
                 ),
@@ -92,7 +92,7 @@ fn main() {
                 .bind()
                 .this()
                 .dot(Name::id("Head").sym())
-                .goes_to(Lit::Int(0).cnst()),
+                .goes_to(Lit::int(0).cnst()),
         )
         .then(
             Name::id("zeroes")
@@ -134,7 +134,7 @@ fn main() {
                         Name::id("plus")
                             .refer()
                             .app(Name::id("n").refer())
-                            .app(Lit::Int(1).cnst()),
+                            .app(Lit::int(1).cnst()),
                     ),
                 ),
         );
@@ -192,8 +192,8 @@ fn main() {
             Name::id("and")
                 .bind()
                 .this()
-                .app(Pat::Unused)
-                .app(Pat::Unused)
+                .app(Pat::blank())
+                .app(Pat::blank())
                 .goes_to(Name::id("False").sym().cnst()),
         );
 

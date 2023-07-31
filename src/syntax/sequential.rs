@@ -182,6 +182,22 @@ pub enum Lit {
 }
 
 impl Lit {
+    pub fn int(i: i64) -> Lit {
+        Lit::Int(i)
+    }
+
+    pub fn flt(x: f64) -> Lit {
+        Lit::Flt(x)
+    }
+
+    pub fn str(s: String) -> Lit {
+        Lit::Str(s)
+    }
+
+    pub fn sym(n: Name) -> Lit {
+        Lit::Sym(n)
+    }
+
     pub fn cnst(self) -> Expr {
         ExprHead::Const(self).head()
     }
@@ -300,6 +316,10 @@ impl PatHead {
 }
 
 impl Pat {
+    pub fn blank() -> Pat {
+        PatHead::Unused.head()
+    }
+
     pub fn this(self) -> Copat {
         Copat {
             head: self,
