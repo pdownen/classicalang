@@ -28,7 +28,7 @@ fn main() {
     let ex3 = Name::id("inc")
         .bind()
         .this()
-        .app(Name::id("plus").bind())
+        .app(Name::id("x").bind())
         .goes_to(
             Name::id("plus")
                 .refer()
