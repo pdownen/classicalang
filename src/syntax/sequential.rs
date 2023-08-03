@@ -286,21 +286,21 @@ impl fmt::Display for Copat {
 
 // Pat ::= PatHead PatOp*
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum PatHead {
     Unused,
     Var(Name),
     Const(Lit),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum PatOp {
     App(Pat),
 }
 
 type PatTail = Vec<PatOp>;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Pat {
     head: PatHead,
     tail: Vec<PatOp>,
