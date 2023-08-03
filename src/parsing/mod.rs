@@ -251,3 +251,26 @@ fn pat_test() {
     );
     
 }
+
+fn copat_op<I>() -> impl Parser<I, Output = CopatOp>
+where
+    I: Stream<Token = char>,
+{
+    let copat_: fn(&mut I) -> StdParseResult<Pat, I>
+        = |input| pat().parse_stream(input).into();
+
+    between(char('('), char(')'), between(spaces(), spaces(), copat_))
+        .map(|p| CopatOp::App(p))
+        .or(lit().map(|v| CopatOp::Dot(v)))
+}
+
+fn copat<I>() -> impl Parser<I, Output = Copat>
+where
+    I: Stream<Token = char>,
+{
+    pat().and(many(spaces().with(copat_op()))).map(
+        |(pat, tail)| {
+		    pat.this().extend(tail)
+        }
+    )
+}
