@@ -268,3 +268,55 @@ where
         }
     )
 }
+
+#[test]
+fn copat_op_test() {
+    assert_eq!(
+        copat_op().easy_parse("(Var x)").map(|(v, _s)| v),
+        Ok(CopatOp::App(PatHead::Var(Name::id("x")).head()))
+    );
+
+    assert_eq!(
+        copat_op().easy_parse(".Sym X").map(|(v, _s)| v),
+        Ok(CopatOp::Dot(Lit::Sym(Name::id("X"))))
+    );
+
+    assert_eq!(
+        copat_op().easy_parse("(Const 10).(Var y)").map(|(v, _s)| v),
+        Ok(CopatOp::App(
+            PatHead::Const(Lit::Int(10)).head().app(PatHead::Var(Name::id("y")).head())
+        ))
+    );
+}
+
+#[test]
+fn copat_test() {
+    assert_eq!(
+        copat().easy_parse("_").map(|(v, _s)| v),
+        Ok(PatHead::Unused.head().this())
+    );
+
+    assert_eq!(
+        copat().easy_parse("(Const 10).(Var x)").map(|(v, _s)| v),
+        Ok(
+            PatHead::Const(Lit::Int(10))
+                .head()
+                .app(PatHead::Var(Name::id("x")).head())
+                .this()
+        )
+    );
+
+    assert_eq!(
+        copat().easy_parse("(Var x).(Const 20).(Sym Z)").map(|(v, _s)| v),
+        Ok(
+            PatHead::Var(Name::id("x"))
+                .head()
+                .app(
+                    PatHead::Const(Lit::Int(20))
+                        .head()
+                        .app(PatHead::Const(Lit::Sym(Name::id("Z"))).head())
+                )
+                .this()
+        )
+    );
+}
