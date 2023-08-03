@@ -1,6 +1,6 @@
 mod examples;
 
-use crate::syntax::sequential::{Lit, Modul, Name, Pat, PatHead, PatOp};
+use crate::syntax::sequential::{Lit, Modul, Name, Pat, PatHead, PatOp, CopatOp, Copat};
 
 extern crate combine;
 
@@ -41,9 +41,7 @@ where
         .skip(char('.'))
         .and(many1(digit()))
         .map(|(s1, s2): (String, String)| {
-                let mut s = s1;
-                s.push('.');
-                s.push_str(s2.as_str());
+                let s = s1 + "." + s2.as_str();
                 s.parse::<f64>().unwrap()
             }
         )
@@ -61,7 +59,7 @@ where
     I: Stream<Token = char>,
 {
     // between(char('"'), many(combine::any()), char('"'));
-    char('"').with(take_until(char('"')))
+    char('"').with(take_until(char('"'))).skip(char('"'))
 }
 
 fn symbol<I>() -> impl Parser<I, Output = Name> 
@@ -69,8 +67,7 @@ where
     I: Stream<Token = char>
 {
     upper().and(take_until(spaces())).map(
-        |(c, s): (char, String)| {
-            let mut s = s;
+        |(c, mut s): (char, String)| {
             s.insert(0, c);
             Name::id(&s)
         }
@@ -132,8 +129,7 @@ where
     I: Stream<Token = char>
 {
     lower().and(take_until(spaces())).map(
-        |(c, s): (char, String)| {
-            let mut s = s;
+        |(c, mut s): (char, String)| {
             s.insert(0, c);
             Name::id(&s)
         }
@@ -203,7 +199,6 @@ fn pat_test() {
         pat_head().easy_parse("\"patterns\"").map(|(v, _s)| v),
         Ok(PatHead::Const(Lit::Str("patterns".to_owned())))
     );
-
     
     assert_eq!(
         pat().easy_parse("_").map(|(v, _s)| v),
@@ -219,14 +214,13 @@ fn pat_test() {
             Name::id("g")).head()
             .app(PatHead::Const(Lit::Int(1)).head()))
     );
-    /* 
     assert_eq!(
-        pat().easy_parse("f(\"argrz\")").map(|(v, _s)| v),
+        pat().easy_parse("f(\"argrz\")(\"arg2\")").map(|(v, _s)| v),
         Ok(PatHead::Var(
             Name::id("f")).head()
-            .app(PatHead::Const(Lit::Str("argrz".to_owned())).head()))
+            .app(PatHead::Const(Lit::Str("argrz".to_owned())).head())
+            .app(PatHead::Const(Lit::Str("arg2".to_owned())).head()))
     );
-    */
     assert_eq!(
         pat().easy_parse("h(X(0)(_))(1.002)").map(|(v, _s)| v),
         Ok(PatHead::Var(
