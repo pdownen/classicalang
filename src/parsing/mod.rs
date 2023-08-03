@@ -7,7 +7,7 @@ extern crate combine;
 use combine::{
     chainl1, eof, many1,
     parser::{char::{char, digit, spaces, lower}, repeat::take_until, self, sequence, range::take_while},
-    value, EasyParser, Parser, StdParseResult, Stream, attempt, between, many, parser::char::upper, satisfy
+    value, EasyParser, Parser, StdParseResult, Stream, attempt, between, many, parser::char::upper, satisfy, none_of
 };
 
 fn natural<I>() -> impl Parser<I, Output = i64>
@@ -58,15 +58,22 @@ fn string_quoted<I>() -> impl Parser<I, Output = String>
 where
     I: Stream<Token = char>,
 {
-    // between(char('"'), many(combine::any()), char('"'));
-    char('"').with(take_until(char('"'))).skip(char('"'))
+    
+    let string_char = none_of("\"\\".chars());
+    let escape_sequence = char('\\')
+        .with(char('"').or(char('\\')).or(char('n').map(|_| '\n')));
+    // look for other escape sequences
+
+    char('"')
+        .with(many(string_char.or(escape_sequence)))
+        .skip(char('"'))
 }
 
 fn symbol<I>() -> impl Parser<I, Output = Name> 
 where
     I: Stream<Token = char>
 {
-    upper().and(take_until(spaces())).map(
+    upper().and(many(satisfy(|c: char| c.is_alphanumeric() || c == '_' || c == '\''))).map(
         |(c, mut s): (char, String)| {
             s.insert(0, c);
             Name::id(&s)
@@ -101,20 +108,18 @@ fn lit_test() {
     );
 
     assert_eq!(
-        lit().easy_parse("\"string test!2@\"").map(|(v, _s)| v),
-        Ok(Lit::Str("string test!2@".to_owned()))
+        lit().easy_parse(r#""string\" \\ test!2@""#).map(|(v, _s)| v),
+        Ok(Lit::Str(r#"string" \ test!2@"#.to_owned()))
     );
 
     assert_eq!(
-        lit().easy_parse("T").map(|(v, _s)| v),
-        Ok(Lit::Sym( Name{ id: "T".to_owned() }) )
+        lit().easy_parse("Testvar").map(|(v, _s)| v),
+        Ok(Lit::Sym( Name{ id: "Testvar".to_owned() }) )
     );
-/* 
     assert_eq!(
         lit().easy_parse("Name").map(|(v, _s)| v),
         Ok(Lit::Sym( Name{ id: "Name".to_owned() }) )
     );
-*/
 }
 
 fn wildcard_pat<I>() -> impl Parser<I, Output = char> 
@@ -128,7 +133,8 @@ fn variable<I>() -> impl Parser<I, Output = Name>
 where
     I: Stream<Token = char>
 {
-    lower().and(take_until(spaces())).map(
+    lower().and(many(satisfy(|c: char| c.is_alphanumeric() || c == '_' || c == '\'')))
+    .map(
         |(c, mut s): (char, String)| {
             s.insert(0, c);
             Name::id(&s)
@@ -189,7 +195,7 @@ fn pat_test() {
     );
     assert_eq!(
         pat_head().easy_parse("X").map(|(v, _s)| v),
-        Ok(PatHead::Const(Lit::Sym(Name::id("X"))))
+        Ok(PatHead::Const(Name::id("X").sym()))
     );
     assert_eq!(
         pat_head().easy_parse("45").map(|(v, _s)| v),
@@ -255,7 +261,7 @@ where
 
     between(char('('), char(')'), between(spaces(), spaces(), copat_))
         .map(|p| CopatOp::App(p))
-        .or(lit().map(|v| CopatOp::Dot(v)))
+        .or(char('.').with(lit().map(|v| CopatOp::Dot(v))))
 }
 
 fn copat<I>() -> impl Parser<I, Output = Copat>
@@ -272,23 +278,39 @@ where
 #[test]
 fn copat_op_test() {
     assert_eq!(
-        copat_op().easy_parse("(Var x)").map(|(v, _s)| v),
-        Ok(CopatOp::App(PatHead::Var(Name::id("x")).head()))
+        copat_op().easy_parse("(xariable)").map(|(v, _s)| v),
+        Ok(CopatOp::App(PatHead::Var(Name::id("xariable")).head()))
     );
 
     assert_eq!(
-        copat_op().easy_parse(".Sym X").map(|(v, _s)| v),
+        copat_op().easy_parse(".X").map(|(v, _s)| v),
         Ok(CopatOp::Dot(Lit::Sym(Name::id("X"))))
     );
 
     assert_eq!(
-        copat_op().easy_parse("(Const 10).(Var y)").map(|(v, _s)| v),
-        Ok(CopatOp::App(
-            PatHead::Const(Lit::Int(10)).head().app(PatHead::Var(Name::id("y")).head())
-        ))
+        copat().easy_parse("10(y)").map(|(v, _s)| v),
+        Ok(
+            Lit::Int(10).mtch()
+                .app(Name::id("y").bind()).this()
+        )
+    );
+    assert_eq!(
+        copat().easy_parse("X.2").map(|(v, _s)| v),
+        Ok(
+            Lit::Sym(Name::id("X")).mtch().this()
+                .dot(Lit::int(2))
+        )
+    );
+    assert_eq!(
+        copat().easy_parse("2.X").map(|(v, _s)| v),
+        Ok(
+            Lit::int(2).mtch().this()
+                .dot(Lit::Sym(Name::id("X")))
+        )
     );
 }
 
+/* 
 #[test]
 fn copat_test() {
     assert_eq!(
@@ -320,3 +342,4 @@ fn copat_test() {
         )
     );
 }
+*/
