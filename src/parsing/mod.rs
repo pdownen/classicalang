@@ -310,36 +310,27 @@ fn copat_op_test() {
     );
 }
 
-/* 
+
 #[test]
 fn copat_test() {
     assert_eq!(
         copat().easy_parse("_").map(|(v, _s)| v),
-        Ok(PatHead::Unused.head().this())
+        Ok(Pat::blank().this())
     );
-
     assert_eq!(
-        copat().easy_parse("(Const 10).(Var x)").map(|(v, _s)| v),
+        copat().easy_parse("10.X").map(|(v, _s)| v),
         Ok(
-            PatHead::Const(Lit::Int(10))
-                .head()
-                .app(PatHead::Var(Name::id("x")).head())
-                .this()
+            Lit::Int(10).mtch().this()
+                .dot(Name::id("X").sym())
+        )
+    );
+    assert_eq!(
+        copat().easy_parse("x.20.Z").map(|(v, _s)| v),
+        Ok(
+            Name::id("x").bind().this()
+                .dot(Lit::Int(20))
+                .dot(Name::id("Z").sym())
         )
     );
 
-    assert_eq!(
-        copat().easy_parse("(Var x).(Const 20).(Sym Z)").map(|(v, _s)| v),
-        Ok(
-            PatHead::Var(Name::id("x"))
-                .head()
-                .app(
-                    PatHead::Const(Lit::Int(20))
-                        .head()
-                        .app(PatHead::Const(Lit::Sym(Name::id("Z"))).head())
-                )
-                .this()
-        )
-    );
 }
-*/
