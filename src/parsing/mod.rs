@@ -1,6 +1,6 @@
 mod examples;
 
-use crate::syntax::sequential::{Lit, Modul, Name, Pat, PatHead, PatOp, CopatOp, Copat};
+use crate::syntax::sequential::{Lit, Modul, Name, Pat, PatHead, PatOp, CopatOp, Copat, ExprHead, ExprTail, ExprOp, Expr};
 
 extern crate combine;
 
@@ -334,3 +334,72 @@ fn copat_test() {
     );
 
 }
+
+fn expr_head<I>() -> impl Parser<I, Output = ExprHead> 
+where
+    I: Stream<Token = char>
+{
+    variable().map(|n: Name| ExprHead::Var(n))
+        .or(lit().map(|l: Lit| ExprHead::Const(l)))
+}
+
+fn expr_op<I>() -> impl Parser<I, Output = ExprOp> 
+where
+    I: Stream<Token = char>
+{ 
+    let expr_: fn(&mut I) -> StdParseResult<Expr, I> 
+        = |input| expr().parse_stream(input).into();
+
+    between(
+        char('('), 
+        char(')'), 
+        between(spaces(), spaces(), expr_.map(|e| ExprOp::App(e))))
+    .or(
+        spaces()
+        .with(char('.').skip(spaces()).with(lit().map(|l| ExprOp::Dot(l)))))
+}
+
+fn expr_tail<I>() -> impl Parser<I, Output = ExprTail> 
+where
+    I: Stream<Token = char>
+{
+    many(expr_op())
+}
+
+fn expr<I>() -> impl Parser<I, Output = Expr> 
+where
+    I: Stream<Token = char>
+{
+    expr_head().and(expr_tail())
+        .map(|(h, t): (ExprHead, ExprTail)| h.head().extend(t) )
+}
+
+#[test]
+fn expr_test() {
+    assert_eq!(
+        expr().parse("2").map(|(v, _s)| v),
+        Ok(Lit::int(2).cnst())
+    );
+    assert_eq!(
+        expr().parse(r#""str""#).map(|(v, _s)| v),
+        Ok(Lit::str("str".to_owned()).cnst())
+    );
+    assert_eq!(
+        expr().parse("f(3)").map(|(v, _s)| v),
+        Ok(
+            Name::id("f").refer()
+                .app(Lit::int(3).cnst())
+        )
+    );
+    /* 
+    assert_eq!(
+        expr().parse("f(3).member1").map(|(v, _s)| v),
+        Ok(
+            Name::id("f").refer()
+                .app(Lit::int(3).cnst())
+            .dot(Name::id("member1").sym())
+        )
+    );
+    */
+}
+

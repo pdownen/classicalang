@@ -86,21 +86,21 @@ impl fmt::Display for Decl {
 // ExprTail ::= ExprOp*
 
 // Expr ::= ExprHead ExprTail
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ExprHead {
     Var(Name),
     Const(Lit),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ExprOp {
     App(Expr),
     Dot(Lit),
 }
 
-type ExprTail = Vec<ExprOp>;
+pub type ExprTail = Vec<ExprOp>;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Expr {
     head: ExprHead,
     tail: ExprTail,
