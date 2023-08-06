@@ -1,12 +1,12 @@
 mod examples;
 
-use crate::syntax::sequential::{Lit, Modul, Name, Pat, PatHead, PatOp, CopatOp, Copat, ExprHead, ExprTail, ExprOp, Expr};
+use crate::syntax::sequential::{Lit, Modul, Name, Pat, PatHead, PatOp, CopatOp, Copat, ExprHead, ExprTail, ExprOp, Expr, Decl};
 
 extern crate combine;
 
 use combine::{
     chainl1, eof, many1,
-    parser::{char::{char, digit, spaces, lower}, repeat::take_until, self, sequence, range::take_while},
+    parser::{char::{char, digit, spaces, lower, string}, repeat::take_until, self, sequence, range::take_while},
     value, EasyParser, Parser, StdParseResult, Stream, attempt, between, many, parser::char::upper, satisfy, none_of
 };
 
@@ -391,15 +391,29 @@ fn expr_test() {
                 .app(Lit::int(3).cnst())
         )
     );
-    /* 
     assert_eq!(
-        expr().parse("f(3).member1").map(|(v, _s)| v),
+        expr().parse(r#"Class(3)("arg2").Symbol.1"#).map(|(v, _s)| v),
         Ok(
-            Name::id("f").refer()
+            Name::id("Class").sym().cnst()
                 .app(Lit::int(3).cnst())
-            .dot(Name::id("member1").sym())
+                .app(Lit::str("arg2".to_owned()).cnst())
+                .dot(Name::id("Symbol").sym())
+                .dot(Lit::int(1))
         )
     );
-    */
+}
+
+fn decl<I>() -> impl Parser<I, Output = Decl> 
+where
+    I: Stream<Token = char>
+{
+    string("include").skip(spaces()).with(expr())
+        .map(|expr| Decl::Include(expr))
+    .or(
+        copat()
+            .skip(spaces()).skip(char('=')).skip(spaces())
+            .and(expr())
+            .map(|(copat, expr)| Decl::Method(copat, expr))
+    )
 }
 
