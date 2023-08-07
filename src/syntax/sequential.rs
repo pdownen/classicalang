@@ -30,7 +30,7 @@ impl fmt::Display for Name {
 }
 
 // Modul ::= Decl_1 ; Decl_2 ; ... Decl_n ;
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Modul {
     pub defns: Vec<Decl>,
 }
@@ -79,7 +79,8 @@ impl fmt::Display for Decl {
 
 // Var = any identifier name starting with lower case letter
 
-// ExprHead ::= Var | Lit
+// ExprHead ::= Var | Lit 
+            // new | {Modul}
 
 // ExprOp ::= (Expr) | .Lit
 

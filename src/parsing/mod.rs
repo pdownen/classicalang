@@ -335,8 +335,7 @@ fn expr_head<I>() -> impl Parser<I, Output = ExprHead>
 where
     I: Stream<Token = char>,
 {
-    variable()
-        .map(|n: Name| ExprHead::Var(n))
+    (variable().map(|n: Name| ExprHead::Var(n)))
         .or(lit().map(|l: Lit| ExprHead::Const(l)))
         .skip(spaces())
 }
@@ -454,11 +453,11 @@ where
     many(decl().skip(char(';')).skip(spaces()))
 }
 
-fn modul<I>() -> impl Parser<I, Output = Modul>
+pub fn modul<I>() -> impl Parser<I, Output = Modul>
 where
     I: Stream<Token = char>,
 {
-    spaces().with(decl_list().map(|defns| Modul { defns }))
+    decl_list().map(|defns| Modul { defns })
 }
 
 #[test]
@@ -496,3 +495,11 @@ fn modul_test() {
         }
     }
 }
+
+pub fn whole_input<I, P>(p: P) -> impl Parser<I, Output = P::Output> 
+where
+    I: Stream<Token = char>,
+    P: Parser<I>
+{
+    spaces().with(p).skip(spaces()).skip(eof())
+} 

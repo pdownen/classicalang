@@ -1,10 +1,12 @@
 #![allow(dead_code)]
 
 mod syntax;
+use combine::EasyParser;
 use syntax::sequential::{Lit, Modul, Name, Pat};
 
 mod parsing;
 
+use parsing::{whole_input, modul};
 use std::f64::consts::PI;
 use std::fmt::{Debug, Display};
 
@@ -225,7 +227,7 @@ fn main() {
                 ),
         )
         .then(
-            Name::id("mul")
+            Name::id("Mul")
                 .sym()
                 .mtch()
                 .app(Name::id("l").bind())
@@ -241,4 +243,28 @@ fn main() {
         );
 
     compare_output(&ex10);
+
+    let math_ex = whole_input(modul()).easy_parse("    
+            Num(n).Eval = n;
+            Add(l)(r).Eval = plus(l.Eval)(r.Eval);
+            Mul(l)(r).Eval = times(l.Eval)(r.Eval);
+        ").map(|(v, _s)| v).unwrap();
+
+    println!("{}", math_ex);
+    assert_eq!(
+        math_ex,
+        ex10
+    );
+
+    /* 
+    loop {
+        // add input + parse -> output
+
+        // store input parse result
+
+        // eval
+    }
+    */
+
 }
+
