@@ -374,18 +374,18 @@ where
 
 #[test]
 fn expr_test() {
-    assert_eq!(expr().parse("2").map(|(v, _s)| v), Ok(Lit::int(2).cnst()));
+    assert_eq!(expr().easy_parse("2").map(|(v, _s)| v), Ok(Lit::int(2).cnst()));
     assert_eq!(
-        expr().parse(r#""str""#).map(|(v, _s)| v),
+        expr().easy_parse(r#""str""#).map(|(v, _s)| v),
         Ok(Lit::str("str".to_owned()).cnst())
     );
     assert_eq!(
-        expr().parse("f(3)").map(|(v, _s)| v),
+        expr().easy_parse("f(3)").map(|(v, _s)| v),
         Ok(Name::id("f").refer().app(Lit::int(3).cnst()))
     );
     assert_eq!(
         expr()
-            .parse(r#"Class(3)("arg1").Symbol("arg2").1"#)
+            .easy_parse(r#"Class(3)("arg1").Symbol("arg2").1"#)
             .map(|(v, _s)| v),
         Ok((Name::id("Class").sym().cnst())
             .app(Lit::int(3).cnst())
@@ -396,7 +396,7 @@ fn expr_test() {
     );
     assert_eq!(
         expr()
-            .parse(
+            .easy_parse(
                 r#"Class(3)("arg1")
                         .Symbol("arg2").1"#
             )
@@ -430,11 +430,11 @@ where
 #[test]
 fn decl_test() {
     assert_eq!(
-        decl().parse("include var").map(|(v, _s)| v),
+        decl().easy_parse("include var").map(|(v, _s)| v),
         Ok(Decl::Include(Name::id("var").refer()))
     );
     assert_eq!(
-        decl().parse("include Sym").map(|(v, _s)| v),
+        decl().easy_parse("include Sym").map(|(v, _s)| v),
         Ok(Decl::Include(Name::id("Sym").sym().cnst()))
     );
 
@@ -469,7 +469,8 @@ fn modul_test() {
         y = 2;
     ";
 
-    let expected_defns = vec![
+    let expected_defns = vec![       
+        Decl::Include(Name::id("Symbol").sym().cnst()),
         Decl::Method(
             Name::id("x").bind().this(),
             Lit::Int(1).cnst(),
@@ -477,8 +478,7 @@ fn modul_test() {
         Decl::Method(
             Name::id("y").bind().this(),
             Lit::Int(2).cnst(),
-        ),
-        Decl::Include(Lit::Int(3).cnst()),
+        )
     ];
 
     let result = modul().easy_parse(input);
