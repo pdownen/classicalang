@@ -149,6 +149,7 @@ where
     wildcard_pat().map(|_| PatHead::Unused)
         .or(variable().map(|name| PatHead::Var(name)))
         .or(lit().map(|v| PatHead::Const(v)))
+        .skip(spaces())
 }
 
 fn pat_op<I>() -> impl Parser<I, Output = PatOp>
@@ -158,7 +159,7 @@ where
     let pat_: fn(&mut I) -> StdParseResult<Pat, I> 
         = |input| pat().parse_stream(input).into();
 
-    between(char('('), char(')'), between(spaces(), spaces(), pat_))
+    between(char('(').skip(spaces()), char(')').skip(spaces()), pat_)
         .map(|p| PatOp::App(p))
 }
 
@@ -166,7 +167,7 @@ fn pat<I>() -> impl Parser<I, Output = Pat>
 where
     I: Stream<Token = char>
 {
-    pat_head().and(many(spaces().with(pat_op()))).map(
+    pat_head().and(many(pat_op())).map(
         |(pat, tail)| {
             pat.head().extend(tail)
         }
@@ -259,16 +260,17 @@ where
     let copat_: fn(&mut I) -> StdParseResult<Pat, I>
         = |input| pat().parse_stream(input).into();
 
-    between(char('('), char(')'), between(spaces(), spaces(), copat_))
+    between(char('(').skip(spaces()), char(')'), copat_)
         .map(|p| CopatOp::App(p))
         .or(char('.').with(lit().map(|v| CopatOp::Dot(v))))
+        .skip(spaces())
 }
 
 fn copat<I>() -> impl Parser<I, Output = Copat>
 where
     I: Stream<Token = char>,
 {
-    pat().and(many(spaces().with(copat_op()))).map(
+    pat().and(many(copat_op())).map(
         |(pat, tail)| {
 		    pat.this().extend(tail)
         }
@@ -341,6 +343,7 @@ where
 {
     variable().map(|n: Name| ExprHead::Var(n))
         .or(lit().map(|l: Lit| ExprHead::Const(l)))
+        .skip(spaces())
 }
 
 fn expr_op<I>() -> impl Parser<I, Output = ExprOp> 
@@ -351,19 +354,20 @@ where
         = |input| expr().parse_stream(input).into();
 
     between(
-        char('('), 
+        char('(').skip(spaces()), 
         char(')'), 
-        between(spaces(), spaces(), expr_.map(|e| ExprOp::App(e))))
+        expr_.map(|e| ExprOp::App(e)))
     .or(
         spaces()
         .with(char('.').skip(spaces()).with(lit().map(|l| ExprOp::Dot(l)))))
+    .skip(spaces())
 }
 
 fn expr_tail<I>() -> impl Parser<I, Output = ExprTail> 
 where
     I: Stream<Token = char>
 {
-    many(spaces().with(expr_op()))
+    many(expr_op())
 }
 
 fn expr<I>() -> impl Parser<I, Output = Expr> 
@@ -371,7 +375,7 @@ where
     I: Stream<Token = char>
 {
     expr_head().and(expr_tail())
-        .map(|(h, t): (ExprHead, ExprTail)| h.head().extend(t) )
+        .map(|(h, t): (ExprHead, ExprTail)| h.head().extend(t))
 }
 
 #[test]
@@ -424,7 +428,6 @@ where
         .map(|expr| Decl::Include(expr)))
     .or(
         copat()
-            .skip(spaces())
             .skip(char('='))
             .skip(spaces())
             .and(expr())
@@ -448,7 +451,7 @@ fn decl_test() {
     );
 
     assert_eq!(
-        decl().parse("five = 5").map(|(v, _s)| v),
+        decl().easy_parse("five = 5").map(|(v, _s)| v),
         Ok(
             Decl::Method(Name::id("five").bind().this(), Lit::Int(5).cnst())
         )
@@ -459,23 +462,23 @@ fn decl_list<I>() -> impl Parser<I, Output = Vec<Decl>>
 where
     I: Stream<Token = char>,
 {
-    sep_by(decl(), char('\n').skip(spaces()))
+    many(decl().skip(char(';')).skip(spaces()))
 }
 
 fn modul<I>() -> impl Parser<I, Output = Modul>
 where
     I: Stream<Token = char>,
 {
-    decl_list().map(|defns| Modul {defns})
+    spaces().with(decl_list().map(|defns| Modul {defns}))
 }
 
 #[test]
 fn modul_test() {
-    let input = r#"
-        x = 1
-        y = 2
-        include 3
-    "#;
+    let input = "
+        x = 1;
+        y = 2;
+        include 3;
+    ";
 
     let expected_defns = vec![
         Decl::Method(
