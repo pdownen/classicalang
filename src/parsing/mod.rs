@@ -482,14 +482,14 @@ fn modul_test() {
 
     let expected_defns = vec![
         Decl::Method(
-            Pat::blank().this(),
-            Lit::int(1).cnst(),
+            Name::id("x").bind().this(),
+            Lit::Int(1).cnst(),
         ),
         Decl::Method(
-            Pat::blank().this(),
-            Lit::int(2).cnst(),
+            Name::id("y").bind().this(),
+            Lit::Int(2).cnst(),
         ),
-        Decl::Include(Lit::int(3).cnst()),
+        Decl::Include(Lit::Int(3).cnst()),
     ];
 
     let result = modul().easy_parse(input);
