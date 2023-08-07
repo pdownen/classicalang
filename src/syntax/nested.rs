@@ -29,7 +29,7 @@ impl fmt::Display for Name {
     }
 }
 
-// Modul ::= Decl_1 \n Decl_2 \n ... \n Decl_n
+// Modul ::= Decl_1 ; Decl_2 ; ... Decl_n ;
 #[derive(Debug)]
 pub struct Modul {
     pub defns: Vec<Decl>,
@@ -54,7 +54,7 @@ impl Modul {
 impl fmt::Display for Modul {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for d in &self.defns {
-            writeln!(f, "{}", d)?;
+            writeln!(f, "{};", d)?;
         }
         Ok(())
     }
