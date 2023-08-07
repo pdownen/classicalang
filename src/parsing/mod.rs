@@ -279,7 +279,7 @@ where
 fn copat_op_test() {
     assert_eq!(
         copat_op().easy_parse("(xariable)").map(|(v, _s)| v),
-        Ok(CopatOp::App(PatHead::Var(Name::id("xariable")).head()))
+        Ok(CopatOp::App(Name::id("xariable").bind()))
     );
 
     assert_eq!(
@@ -363,7 +363,7 @@ fn expr_tail<I>() -> impl Parser<I, Output = ExprTail>
 where
     I: Stream<Token = char>
 {
-    many(expr_op())
+    many(spaces().with(expr_op()))
 }
 
 fn expr<I>() -> impl Parser<I, Output = Expr> 
@@ -392,12 +392,25 @@ fn expr_test() {
         )
     );
     assert_eq!(
-        expr().parse(r#"Class(3)("arg2").Symbol.1"#).map(|(v, _s)| v),
+        expr().parse(r#"Class(3)("arg1").Symbol("arg2").1"#).map(|(v, _s)| v),
         Ok(
             Name::id("Class").sym().cnst()
                 .app(Lit::int(3).cnst())
-                .app(Lit::str("arg2".to_owned()).cnst())
+                .app(Lit::str("arg1".to_owned()).cnst())
                 .dot(Name::id("Symbol").sym())
+                    .app(Lit::str("arg2".to_owned()).cnst())
+                .dot(Lit::int(1))
+        )
+    );
+    assert_eq!(
+        expr().parse(r#"Class(3)("arg1")
+                        .Symbol("arg2").1"#).map(|(v, _s)| v),
+        Ok(
+            Name::id("Class").sym().cnst()
+                .app(Lit::int(3).cnst())
+                .app(Lit::str("arg1".to_owned()).cnst())
+                .dot(Name::id("Symbol").sym())
+                    .app(Lit::str("arg2".to_owned()).cnst())
                 .dot(Lit::int(1))
         )
     );
@@ -407,14 +420,39 @@ fn decl<I>() -> impl Parser<I, Output = Decl>
 where
     I: Stream<Token = char>
 {
-    string("include").skip(spaces()).with(expr())
-        .map(|expr| Decl::Include(expr))
+    attempt(string("include").skip(spaces()).with(expr())
+        .map(|expr| Decl::Include(expr)))
     .or(
         copat()
-            .skip(spaces()).skip(char('=')).skip(spaces())
+            .skip(spaces())
+            .skip(char('='))
+            .skip(spaces())
             .and(expr())
             .map(|(copat, expr)| Decl::Method(copat, expr))
     )
+}
+
+#[test]
+fn decl_test() {
+    assert_eq!(
+        decl().parse("include var").map(|(v, _s)| v),
+        Ok(
+            Decl::Include(Name::id("var").refer())
+        )
+    );
+    assert_eq!(
+        decl().parse("include Sym").map(|(v, _s)| v),
+        Ok(
+            Decl::Include(Name::id("Sym").sym().cnst())
+        )
+    );
+
+    assert_eq!(
+        decl().parse("five = 5").map(|(v, _s)| v),
+        Ok(
+            Decl::Method(Name::id("five").bind().this(), Lit::Int(5).cnst())
+        )
+    );
 }
 
 fn decl_list<I>() -> impl Parser<I, Output = Vec<Decl>>
