@@ -470,9 +470,15 @@ fn modul_test() {
     ";
 
     let expected_defns = vec![
-        Decl::Include(Name::id("Symbol").refer()),
-        Decl::Method(Name::id("x").bind().this(), Lit::int(1).cnst()),
-        Decl::Method(Name::id("y").bind().this(), Lit::int(2).cnst()),
+        Decl::Method(
+            Name::id("x").bind().this(),
+            Lit::Int(1).cnst(),
+        ),
+        Decl::Method(
+            Name::id("y").bind().this(),
+            Lit::Int(2).cnst(),
+        ),
+        Decl::Include(Lit::Int(3).cnst()),
     ];
 
     let result = modul().easy_parse(input);
