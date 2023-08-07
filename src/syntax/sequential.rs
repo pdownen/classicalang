@@ -151,8 +151,8 @@ impl fmt::Display for ExprHead {
 impl fmt::Display for ExprOp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ExprOp::App(a) => write!(f, "{}", a),
-            ExprOp::Dot(m) => write!(f, "{}", m),
+            ExprOp::App(a) => write!(f, "({})", a),
+            ExprOp::Dot(m) => write!(f, ".{}", m),
         }
     }
 }
