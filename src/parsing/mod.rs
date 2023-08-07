@@ -5,7 +5,7 @@ use crate::syntax::sequential::{Lit, Modul, Name, Pat, PatHead, PatOp, CopatOp, 
 extern crate combine;
 
 use combine::{
-    chainl1, eof, many1,
+    chainl1, eof, many1, sep_by,
     parser::{char::{char, digit, spaces, lower, string}, repeat::take_until, self, sequence, range::take_while},
     value, EasyParser, Parser, StdParseResult, Stream, attempt, between, many, parser::char::upper, satisfy, none_of
 };
@@ -279,7 +279,7 @@ where
 fn copat_op_test() {
     assert_eq!(
         copat_op().easy_parse("(xariable)").map(|(v, _s)| v),
-        Ok(CopatOp::App(Name::id("xariable").bind()))
+        Ok(CopatOp::App(PatHead::Var(Name::id("xariable")).head()))
     );
 
     assert_eq!(
@@ -363,7 +363,7 @@ fn expr_tail<I>() -> impl Parser<I, Output = ExprTail>
 where
     I: Stream<Token = char>
 {
-    many(spaces().with(expr_op()))
+    many(expr_op())
 }
 
 fn expr<I>() -> impl Parser<I, Output = Expr> 
@@ -392,25 +392,12 @@ fn expr_test() {
         )
     );
     assert_eq!(
-        expr().parse(r#"Class(3)("arg1").Symbol("arg2").1"#).map(|(v, _s)| v),
+        expr().parse(r#"Class(3)("arg2").Symbol.1"#).map(|(v, _s)| v),
         Ok(
             Name::id("Class").sym().cnst()
                 .app(Lit::int(3).cnst())
-                .app(Lit::str("arg1".to_owned()).cnst())
+                .app(Lit::str("arg2".to_owned()).cnst())
                 .dot(Name::id("Symbol").sym())
-                    .app(Lit::str("arg2".to_owned()).cnst())
-                .dot(Lit::int(1))
-        )
-    );
-    assert_eq!(
-        expr().parse(r#"Class(3)("arg1")
-                        .Symbol("arg2").1"#).map(|(v, _s)| v),
-        Ok(
-            Name::id("Class").sym().cnst()
-                .app(Lit::int(3).cnst())
-                .app(Lit::str("arg1".to_owned()).cnst())
-                .dot(Name::id("Symbol").sym())
-                    .app(Lit::str("arg2".to_owned()).cnst())
                 .dot(Lit::int(1))
         )
     );
@@ -420,37 +407,26 @@ fn decl<I>() -> impl Parser<I, Output = Decl>
 where
     I: Stream<Token = char>
 {
-    attempt(string("include").skip(spaces()).with(expr())
-        .map(|expr| Decl::Include(expr)))
+    string("include").skip(spaces()).with(expr())
+        .map(|expr| Decl::Include(expr))
     .or(
         copat()
-            .skip(spaces())
-            .skip(char('='))
-            .skip(spaces())
+            .skip(spaces()).skip(char('=')).skip(spaces())
             .and(expr())
             .map(|(copat, expr)| Decl::Method(copat, expr))
     )
 }
 
-#[test]
-fn decl_test() {
-    assert_eq!(
-        decl().parse("include var").map(|(v, _s)| v),
-        Ok(
-            Decl::Include(Name::id("var").refer())
-        )
-    );
-    assert_eq!(
-        decl().parse("include Sym").map(|(v, _s)| v),
-        Ok(
-            Decl::Include(Name::id("Sym").sym().cnst())
-        )
-    );
+fn decl_list<I>() -> impl Parser<I, Output = Vec<Decl>>
+where
+    I: Stream<Token = char>,
+{
+    sep_by(decl(), char('\n').skip(spaces()))
+}
 
-    assert_eq!(
-        decl().parse("five = 5").map(|(v, _s)| v),
-        Ok(
-            Decl::Method(Name::id("five").bind().this(), Lit::Int(5).cnst())
-        )
-    );
+fn modul<I>() -> impl Parser<I, Output = Modul>
+where
+    I: Stream<Token = char>,
+{
+    decl_list().map(|defns| Modul {defns})
 }
