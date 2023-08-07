@@ -468,3 +468,39 @@ where
 {
     decl_list().map(|defns| Modul {defns})
 }
+
+#[test]
+fn modul_test() {
+    let input = r#"
+        x = 1
+        y = 2
+        include 3
+    "#;
+
+    let expected_defns = vec![
+        Decl::Method(
+            Pat::blank().this(),
+            Lit::int(1).cnst(),
+        ),
+        Decl::Method(
+            Pat::blank().this(),
+            Lit::int(2).cnst(),
+        ),
+        Decl::Include(Lit::int(3).cnst()),
+    ];
+
+    let result = modul().easy_parse(input);
+
+    match result {
+        Ok((parsed_modul, _)) => {
+            assert_eq!(parsed_modul.defns.len(), expected_defns.len());
+
+            for (parsed_decl, expected_decl) in parsed_modul.defns.iter().zip(&expected_defns) {
+                assert_eq!(parsed_decl, expected_decl);
+            }
+        }
+        Err(err) => {
+            panic!("Parsing error: {:?}", err);
+        }
+    }
+}
