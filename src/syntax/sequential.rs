@@ -62,7 +62,7 @@ impl fmt::Display for Modul {
 
 // Decl ::= include Expr
 //        | Copat = Expr
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Decl {
     Include(Expr),
     Method(Copat, Expr),
