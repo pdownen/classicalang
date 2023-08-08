@@ -146,7 +146,7 @@ impl fmt::Display for ExprHead {
         match self {
             ExprHead::Var(x) => write!(f, "{}", x),
             ExprHead::Const(c) => write!(f, "{}", c),
-            ExprHead::Lambda(l) => write!(f, "{}", l),
+            ExprHead::Lambda(l) => write!(f, "{{{l}}}"),
         }
     }
 }
