@@ -80,7 +80,7 @@ impl fmt::Display for Decl {
 // Var = any identifier name starting with lower case letter
 
 // ExprHead ::= Var | Lit 
-            // new | {Modul}
+                       // | {Modul}
 
 // ExprOp ::= (Expr) | .Lit
 
@@ -91,6 +91,7 @@ impl fmt::Display for Decl {
 pub enum ExprHead {
     Var(Name),
     Const(Lit),
+    Lambda(Modul)
 }
 
 #[derive(Debug, PartialEq)]
@@ -145,6 +146,7 @@ impl fmt::Display for ExprHead {
         match self {
             ExprHead::Var(x) => write!(f, "{}", x),
             ExprHead::Const(c) => write!(f, "{}", c),
+            ExprHead::Lambda(l) => write!(f, "{}", l),
         }
     }
 }

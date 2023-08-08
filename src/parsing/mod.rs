@@ -335,8 +335,12 @@ fn expr_head<I>() -> impl Parser<I, Output = ExprHead>
 where
     I: Stream<Token = char>,
 {
+    let modul_: fn(&mut I) -> StdParseResult<Modul, I> 
+        = |input| modul().parse_stream(input).into();
+
     (variable().map(|n: Name| ExprHead::Var(n)))
         .or(lit().map(|l: Lit| ExprHead::Const(l)))
+        .or(between(char('{').skip(spaces()), char('}'), modul_).map(|f| ExprHead::Lambda(f)))
         .skip(spaces())
 }
 
@@ -344,7 +348,8 @@ fn expr_op<I>() -> impl Parser<I, Output = ExprOp>
 where
     I: Stream<Token = char>,
 {
-    let expr_: fn(&mut I) -> StdParseResult<Expr, I> = |input| expr().parse_stream(input).into();
+    let expr_: fn(&mut I) -> StdParseResult<Expr, I> 
+        = |input| expr().parse_stream(input).into();
 
     between(
         char('(').skip(spaces()),
