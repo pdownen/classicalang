@@ -9,6 +9,7 @@ mod parsing;
 use parsing::{whole_input, modul};
 use std::f64::consts::PI;
 use std::fmt::{Debug, Display};
+use std::io::BufRead;
 
 fn compare_output<T: Debug + Display>(x: &T) {
     println!("----------");
@@ -245,26 +246,34 @@ fn main() {
     compare_output(&ex10);
 
     let math_ex = whole_input(modul()).easy_parse("    
-            Num(n).Eval = n;
-            Add(l)(r).Eval = plus(l.Eval)(r.Eval);
-            Mul(l)(r).Eval = times(l.Eval)(r.Eval);
-        ").map(|(v, _s)| v).unwrap();
+        fact(0) = 1;
+        fact(n) = times(n)(fact(minus(n)(1)));
+    ").map(|(v, _s)| v).unwrap();
 
+    /* 
     println!("{}", math_ex);
     assert_eq!(
         math_ex,
-        ex10
+        ex5
     );
+    */
 
-    /* 
     loop {
+        let stdin = std::io::stdin();
+        for line in stdin.lock().lines() {
+            let line = line.unwrap();
+            let line = line.as_str();
+            match whole_input(modul()).easy_parse(line).map(|(v, _s)| v) {
+                Ok(v) => println!("{v:?}\n{v}"),
+                Err(e) => println!("{e}"),
+            };
+        }
+
         // add input + parse -> output
 
         // store input parse result
 
         // eval
     }
-    */
 
 }
-
