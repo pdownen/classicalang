@@ -93,10 +93,10 @@ fn lit<I>() -> impl Parser<I, Output = Lit>
 where
     I: Stream<Token = char>,
 {
-    attempt(float().map(|f| Lit::Flt(f)))
-        .or(integer().map(|i| Lit::Int(i)))
-        .or(string_quoted().map(|i| Lit::Str(i)))
-        .or(symbol().map(|name| Lit::Sym(name)))
+    attempt(float().map(Lit::Flt))
+        .or(integer().map(Lit::Int))
+        .or(string_quoted().map(Lit::Str))
+        .or(symbol().map(Lit::Sym))
 }
 
 #[test]
@@ -121,15 +121,11 @@ fn lit_test() {
 
     assert_eq!(
         lit().easy_parse("Testvar").map(|(v, _s)| v),
-        Ok(Lit::Sym(Name {
-            id: "Testvar".to_owned()
-        }))
+        Ok(Name::id("Testvar").sym())
     );
     assert_eq!(
         lit().easy_parse("Name").map(|(v, _s)| v),
-        Ok(Lit::Sym(Name {
-            id: "Name".to_owned()
-        }))
+        Ok(Name::id("Name").sym())
     );
 }
 
@@ -169,7 +165,7 @@ where
 {
     let pat_: fn(&mut I) -> StdParseResult<Pat, I> = |input| pat().parse_stream(input).into();
 
-    between(char('(').skip(spaces()), char(')').skip(spaces()), pat_).map(|p| DeconsOp::App(p))
+    between(char('(').skip(spaces()), char(')').skip(spaces()), pat_).map(DeconsOp::App)
 }
 
 fn pat<I>() -> impl Parser<I, Output = Pat>
@@ -277,7 +273,7 @@ where
 
     between(char('(').skip(spaces()), char(')'), copat_)
         .map(|p| CopatOp::App(p))
-        .or(char('.').with(lit().map(|v| CopatOp::Dot(v))))
+        .or(char('.').with(lit().map(CopatOp::Dot)))
         .skip(spaces())
 }
 
