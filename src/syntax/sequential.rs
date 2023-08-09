@@ -19,7 +19,7 @@ impl Name {
     }
 
     pub fn bind(self) -> Pat {
-        PatHead::Var(self).head()
+        Pat::Var(self)
     }
 }
 
@@ -79,8 +79,8 @@ impl fmt::Display for Decl {
 
 // Var = any identifier name starting with lower case letter
 
-// ExprHead ::= Var | Lit 
-                       // | {Modul}
+// ExprHead ::= Var | Lit
+// | {Modul}
 
 // ExprOp ::= (Expr) | .Lit
 
@@ -91,7 +91,7 @@ impl fmt::Display for Decl {
 pub enum ExprHead {
     Var(Name),
     Const(Lit),
-    Lambda(Modul)
+    Lambda(Modul),
 }
 
 #[derive(Debug, PartialEq)]
@@ -205,8 +205,11 @@ impl Lit {
         ExprHead::Const(self).head()
     }
 
-    pub fn mtch(self) -> Pat {
-        PatHead::Const(self).head()
+    pub fn mtch(self) -> Decons {
+        Decons {
+            head: self,
+            tail: Vec::new(),
+        }
     }
 }
 
@@ -283,44 +286,55 @@ impl fmt::Display for Copat {
     }
 }
 
-// PatHead ::= _ | Var | Lit
+// Pat ::= _ | Var | Decons
 
-// PatOp ::= (Pat)
+// Decons ::= Lit DeconsOp*
 
-// Pat ::= PatHead PatOp*
+// DeconsOp ::= (Pat)
 
 #[derive(Debug, PartialEq)]
-pub enum PatHead {
+pub enum Pat {
     Unused,
     Var(Name),
-    Const(Lit),
+    Struc(Decons),
 }
 
 #[derive(Debug, PartialEq)]
-pub enum PatOp {
+pub enum DeconsOp {
     App(Pat),
 }
 
-type PatTail = Vec<PatOp>;
+type DeconsTail = Vec<DeconsOp>;
 
 #[derive(Debug, PartialEq)]
-pub struct Pat {
-    head: PatHead,
-    tail: Vec<PatOp>,
+pub struct Decons {
+    head: Lit,
+    tail: DeconsTail,
 }
 
-impl PatHead {
-    pub fn head(self) -> Pat {
-        Pat {
-            head: self,
-            tail: Vec::new(),
-        }
+impl Decons {
+    pub fn decons(self) -> Pat {
+        Pat::Struc(self)
+    }
+
+    pub fn push(mut self, op: DeconsOp) -> Decons {
+        self.tail.push(op);
+        self
+    }
+
+    pub fn extend(mut self, more: DeconsTail) -> Decons {
+        self.tail.extend(more);
+        self
+    }
+
+    pub fn app(self, arg: Pat) -> Decons {
+        self.push(DeconsOp::App(arg))
     }
 }
 
 impl Pat {
     pub fn blank() -> Pat {
-        PatHead::Unused.head()
+        Pat::Unused
     }
 
     pub fn this(self) -> Copat {
@@ -329,41 +343,27 @@ impl Pat {
             tail: Vec::new(),
         }
     }
-
-    pub fn push(mut self, op: PatOp) -> Pat {
-        self.tail.push(op);
-        self
-    }
-
-    pub fn extend(mut self, more: PatTail) -> Pat {
-        self.tail.extend(more);
-        self
-    }
-
-    pub fn app(self, arg: Pat) -> Pat {
-        self.push(PatOp::App(arg))
-    }
-}
-
-impl fmt::Display for PatHead {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            PatHead::Unused => write!(f, "_"),
-            PatHead::Var(x) => write!(f, "{}", x),
-            PatHead::Const(c) => write!(f, "{}", c),
-        }
-    }
-}
-
-impl fmt::Display for PatOp {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            PatOp::App(p) => write!(f, "({})", p),
-        }
-    }
 }
 
 impl fmt::Display for Pat {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Pat::Unused => write!(f, "_"),
+            Pat::Var(x) => write!(f, "{}", x),
+            Pat::Struc(s) => write!(f, "{}", s),
+        }
+    }
+}
+
+impl fmt::Display for DeconsOp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            DeconsOp::App(p) => write!(f, "({})", p),
+        }
+    }
+}
+
+impl fmt::Display for Decons {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.head)?;
 

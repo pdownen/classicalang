@@ -151,8 +151,8 @@ impl Lit {
         Expr::Const(self)
     }
 
-    pub fn mtch(self) -> Pat {
-        Pat::Const(self)
+    pub fn mtch(self) -> Decons {
+        Decons::Const(self)
     }
 }
 
@@ -203,14 +203,31 @@ impl fmt::Display for Copat {
 
 // Pat ::= _
 //       | Var
-//       | Lit
-//       | Pat(Pat)
+//       | Decons
+//
+// Decons ::= Lit
+//          | Decons(Pat)
 #[derive(Debug)]
 pub enum Pat {
     Unused,
     Var(Name),
+    Struc(Decons),
+}
+
+#[derive(Debug)]
+pub enum Decons {
     Const(Lit),
-    App(Box<Pat>, Box<Pat>),
+    App(Box<Decons>, Box<Pat>),
+}
+
+impl Decons {
+    pub fn decons(self) -> Pat {
+        Pat::Struc(self)
+    }
+
+    pub fn app(self, arg: Pat) -> Decons {
+        Decons::App(Box::new(self), Box::new(arg))
+    }
 }
 
 impl Pat {
@@ -221,10 +238,6 @@ impl Pat {
     pub fn this(self) -> Copat {
         Copat::This(self)
     }
-
-    pub fn app(self, arg: Pat) -> Pat {
-        Pat::App(Box::new(self), Box::new(arg))
-    }
 }
 
 impl fmt::Display for Pat {
@@ -232,8 +245,16 @@ impl fmt::Display for Pat {
         match self {
             Pat::Unused => write!(f, "_"),
             Pat::Var(x) => write!(f, "{}", x),
-            Pat::Const(c) => write!(f, "{}", c),
-            Pat::App(p1, p2) => write!(f, "{}({})", p1, p2),
+            Pat::Struc(s) => write!(f, "{}", s),
+        }
+    }
+}
+
+impl fmt::Display for Decons {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Decons::Const(c) => write!(f, "{}", c),
+            Decons::App(p1, p2) => write!(f, "{}({})", p1, p2),
         }
     }
 }

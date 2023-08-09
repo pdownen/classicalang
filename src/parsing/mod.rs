@@ -1,7 +1,7 @@
 mod examples;
 
 use crate::syntax::sequential::{
-    Copat, CopatOp, Decl, Expr, ExprHead, ExprOp, ExprTail, Lit, Modul, Name, Pat, PatHead, PatOp,
+    Copat, CopatOp, Decl, Decons, DeconsOp, Expr, ExprHead, ExprOp, ExprTail, Lit, Modul, Name, Pat,
 };
 
 extern crate combine;
@@ -154,33 +154,31 @@ where
         })
 }
 
-fn pat_head<I>() -> impl Parser<I, Output = PatHead>
+fn decons<I>() -> impl Parser<I, Output = Decons>
 where
     I: Stream<Token = char>,
 {
-    wildcard_pat()
-        .map(|_| PatHead::Unused)
-        .or(variable().map(|name| PatHead::Var(name)))
-        .or(lit().map(|v| PatHead::Const(v)))
-        .skip(spaces())
+    lit()
+        .and(many(decons_op()))
+        .map(|(c, ops)| c.mtch().extend(ops))
 }
 
-fn pat_op<I>() -> impl Parser<I, Output = PatOp>
+fn decons_op<I>() -> impl Parser<I, Output = DeconsOp>
 where
     I: Stream<Token = char>,
 {
     let pat_: fn(&mut I) -> StdParseResult<Pat, I> = |input| pat().parse_stream(input).into();
 
-    between(char('(').skip(spaces()), char(')').skip(spaces()), pat_).map(|p| PatOp::App(p))
+    between(char('(').skip(spaces()), char(')').skip(spaces()), pat_).map(|p| DeconsOp::App(p))
 }
 
 fn pat<I>() -> impl Parser<I, Output = Pat>
 where
     I: Stream<Token = char>,
 {
-    pat_head()
-        .and(many(pat_op()))
-        .map(|(pat, tail)| pat.head().extend(tail))
+    (wildcard_pat().map(|_| Pat::blank()))
+        .or(variable().map(Pat::Var))
+        .or(decons().map(Pat::Struc))
 }
 
 #[test]
@@ -192,75 +190,82 @@ fn pat_test() {
         Ok(Name::id("x"))
     );
 
-    assert_eq!(
-        pat_head().easy_parse("_").map(|(v, _s)| v),
-        Ok(PatHead::Unused)
-    );
-    assert_eq!(
-        pat_head().easy_parse("x").map(|(v, _s)| v),
-        Ok(PatHead::Var(Name::id("x")))
-    );
-    assert_eq!(
-        pat_head().easy_parse("X").map(|(v, _s)| v),
-        Ok(PatHead::Const(Name::id("X").sym()))
-    );
-    assert_eq!(
-        pat_head().easy_parse("45").map(|(v, _s)| v),
-        Ok(PatHead::Const(Lit::Int(45)))
-    );
-    assert_eq!(
-        pat_head().easy_parse("\"patterns\"").map(|(v, _s)| v),
-        Ok(PatHead::Const(Lit::Str("patterns".to_owned())))
-    );
-
     assert_eq!(pat().easy_parse("_").map(|(v, _s)| v), Ok(Pat::blank()));
     assert_eq!(
-        pat().easy_parse("f").map(|(v, _s)| v),
-        Ok(PatHead::Var(Name::id("f")).head())
+        pat().easy_parse("x").map(|(v, _s)| v),
+        Ok(Pat::Var(Name::id("x")))
+    );
+
+    assert_eq!(
+        decons().easy_parse("X").map(|(v, _s)| v),
+        Ok(Name::id("X").sym().mtch())
     );
     assert_eq!(
-        pat().easy_parse("g(1)").map(|(v, _s)| v),
-        Ok(PatHead::Var(Name::id("g"))
-            .head()
-            .app(PatHead::Const(Lit::Int(1)).head()))
+        decons().easy_parse("45").map(|(v, _s)| v),
+        Ok(Lit::Int(45).mtch())
     );
     assert_eq!(
-        pat().easy_parse("f(\"argrz\")(\"arg2\")").map(|(v, _s)| v),
-        Ok(PatHead::Var(Name::id("f"))
-            .head()
-            .app(PatHead::Const(Lit::Str("argrz".to_owned())).head())
-            .app(PatHead::Const(Lit::Str("arg2".to_owned())).head()))
+        decons().easy_parse("\"patterns\"").map(|(v, _s)| v),
+        Ok(Lit::Str("patterns".to_owned()).mtch())
+    );
+
+    assert_eq!(
+        pat().easy_parse("X").map(|(v, _s)| v),
+        Ok(Name::id("X").sym().mtch().decons())
     );
     assert_eq!(
-        pat().easy_parse("h(X(0)(_))(1.002)").map(|(v, _s)| v),
-        Ok(PatHead::Var(Name::id("h"))
-            .head()
+        pat().easy_parse("45").map(|(v, _s)| v),
+        Ok(Lit::Int(45).mtch().decons())
+    );
+    assert_eq!(
+        pat().easy_parse("\"patterns\"").map(|(v, _s)| v),
+        Ok(Lit::Str("patterns".to_owned()).mtch().decons())
+    );
+
+    assert_eq!(
+        decons_op().easy_parse("(1)").map(|(v, _s)| v),
+        Ok(DeconsOp::App(Lit::Int(1).mtch().decons()))
+    );
+    assert_eq!(
+        decons().easy_parse("G(1)").map(|(v, _s)| v),
+        Ok(Name::id("G").sym().mtch().app(Lit::Int(1).mtch().decons()))
+    );
+    assert_eq!(
+        decons()
+            .easy_parse("F(\"argrz\")(\"arg2\")")
+            .map(|(v, _s)| v),
+        Ok((Name::id("F").sym().mtch())
+            .app(Lit::Str("argrz".to_owned()).mtch().decons())
+            .app(Lit::Str("arg2".to_owned()).mtch().decons()))
+    );
+    assert_eq!(
+        decons().easy_parse("H(X(0)(_))(1.002)").map(|(v, _s)| v),
+        Ok((Name::id("H").sym().mtch())
             .app(
-                PatHead::Const(Lit::Sym(Name::id("X")))
-                    .head()
-                    .app(PatHead::Const(Lit::Int(0)).head())
-                    .app(PatHead::Unused.head())
+                (Lit::Sym(Name::id("X")).mtch())
+                    .app(Lit::Int(0).mtch().decons())
+                    .app(Pat::Unused)
+                    .decons()
             )
-            .app(PatHead::Const(Lit::Flt(1.002)).head()))
+            .app(Lit::Flt(1.002).mtch().decons()))
     );
     assert_eq!(
         pat()
             .easy_parse(
-                "h( X(0)(_)) 
+                "H( X(0)(_)) 
                             (1.002) 
                             (v)"
             )
             .map(|(v, _s)| v),
-        Ok(PatHead::Var(Name::id("h"))
-            .head()
+        Ok((Name::id("H").sym().mtch())
             .app(
-                PatHead::Const(Lit::Sym(Name::id("X")))
-                    .head()
-                    .app(PatHead::Const(Lit::Int(0)).head())
-                    .app(PatHead::Unused.head())
+                (Lit::Sym(Name::id("X")).mtch())
+                    .app(Lit::Int(0).mtch().decons())
+                    .app(Pat::Unused)
+                    .decons()
             )
-            .app(PatHead::Const(Lit::Flt(1.002)).head())
-            .app(PatHead::Var(Name::id("v")).head()))
+            .app(Lit::Flt(1.002).mtch().decons())
+            .decons())
     );
 }
 
@@ -299,15 +304,27 @@ fn copat_op_test() {
 
     assert_eq!(
         copat().easy_parse("10(y)").map(|(v, _s)| v),
-        Ok(Lit::Int(10).mtch().app(Name::id("y").bind()).this())
+        Ok(Lit::Int(10)
+            .mtch()
+            .app(Name::id("y").bind())
+            .decons()
+            .this())
     );
     assert_eq!(
         copat().easy_parse("X.2").map(|(v, _s)| v),
-        Ok(Lit::Sym(Name::id("X")).mtch().this().dot(Lit::int(2)))
+        Ok(Lit::Sym(Name::id("X"))
+            .mtch()
+            .decons()
+            .this()
+            .dot(Lit::int(2)))
     );
     assert_eq!(
         copat().easy_parse("2.X").map(|(v, _s)| v),
-        Ok(Lit::int(2).mtch().this().dot(Lit::Sym(Name::id("X"))))
+        Ok(Lit::int(2)
+            .mtch()
+            .decons()
+            .this()
+            .dot(Lit::Sym(Name::id("X"))))
     );
 }
 
@@ -319,7 +336,7 @@ fn copat_test() {
     );
     assert_eq!(
         copat().easy_parse("10.X").map(|(v, _s)| v),
-        Ok(Lit::Int(10).mtch().this().dot(Name::id("X").sym()))
+        Ok(Lit::Int(10).mtch().decons().this().dot(Name::id("X").sym()))
     );
     assert_eq!(
         copat().easy_parse("x.20.Z").map(|(v, _s)| v),
@@ -335,8 +352,7 @@ fn expr_head<I>() -> impl Parser<I, Output = ExprHead>
 where
     I: Stream<Token = char>,
 {
-    let modul_: fn(&mut I) -> StdParseResult<Modul, I> 
-        = |input| modul().parse_stream(input).into();
+    let modul_: fn(&mut I) -> StdParseResult<Modul, I> = |input| modul().parse_stream(input).into();
 
     (variable().map(|n: Name| ExprHead::Var(n)))
         .or(lit().map(|l: Lit| ExprHead::Const(l)))
@@ -348,8 +364,7 @@ fn expr_op<I>() -> impl Parser<I, Output = ExprOp>
 where
     I: Stream<Token = char>,
 {
-    let expr_: fn(&mut I) -> StdParseResult<Expr, I> 
-        = |input| expr().parse_stream(input).into();
+    let expr_: fn(&mut I) -> StdParseResult<Expr, I> = |input| expr().parse_stream(input).into();
 
     between(
         char('(').skip(spaces()),
@@ -378,7 +393,10 @@ where
 
 #[test]
 fn expr_test() {
-    assert_eq!(expr().easy_parse("2").map(|(v, _s)| v), Ok(Lit::int(2).cnst()));
+    assert_eq!(
+        expr().easy_parse("2").map(|(v, _s)| v),
+        Ok(Lit::int(2).cnst())
+    );
     assert_eq!(
         expr().easy_parse(r#""str""#).map(|(v, _s)| v),
         Ok(Lit::str("str".to_owned()).cnst())
@@ -473,16 +491,10 @@ fn modul_test() {
         y = 2;
     ";
 
-    let expected_defns = vec![       
+    let expected_defns = vec![
         Decl::Include(Name::id("Symbol").sym().cnst()),
-        Decl::Method(
-            Name::id("x").bind().this(),
-            Lit::Int(1).cnst(),
-        ),
-        Decl::Method(
-            Name::id("y").bind().this(),
-            Lit::Int(2).cnst(),
-        )
+        Decl::Method(Name::id("x").bind().this(), Lit::Int(1).cnst()),
+        Decl::Method(Name::id("y").bind().this(), Lit::Int(2).cnst()),
     ];
 
     let result = modul().easy_parse(input);
@@ -501,10 +513,10 @@ fn modul_test() {
     }
 }
 
-pub fn whole_input<I, P>(p: P) -> impl Parser<I, Output = P::Output> 
+pub fn whole_input<I, P>(p: P) -> impl Parser<I, Output = P::Output>
 where
     I: Stream<Token = char>,
-    P: Parser<I>
+    P: Parser<I>,
 {
     spaces().with(p).skip(spaces()).skip(eof())
-} 
+}

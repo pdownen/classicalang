@@ -6,7 +6,7 @@ use syntax::sequential::{Lit, Modul, Name, Pat};
 
 mod parsing;
 
-use parsing::{whole_input, modul};
+use parsing::{modul, whole_input};
 use std::f64::consts::PI;
 use std::fmt::{Debug, Display};
 use std::io::BufRead;
@@ -67,7 +67,7 @@ fn main() {
             Name::id("fact")
                 .bind()
                 .this()
-                .app(Lit::int(0).mtch())
+                .app(Lit::int(0).mtch().decons())
                 .goes_to(Lit::int(1).cnst()),
         )
         .then(
@@ -187,8 +187,8 @@ fn main() {
             Name::id("and")
                 .bind()
                 .this()
-                .app(Name::id("True").sym().mtch())
-                .app(Name::id("True").sym().mtch())
+                .app(Name::id("True").sym().mtch().decons())
+                .app(Name::id("True").sym().mtch().decons())
                 .goes_to(Name::id("True").sym().cnst()),
         )
         .then(
@@ -204,53 +204,61 @@ fn main() {
 
     let ex10 = Modul::top()
         .then(
-            Name::id("Num")
+            (Name::id("Num")
                 .sym()
                 .mtch()
                 .app(Name::id("n").bind())
-                .this()
-                .dot(Name::id("Eval").sym())
-                .goes_to(Name::id("n").refer()),
+                .decons())
+            .this()
+            .dot(Name::id("Eval").sym())
+            .goes_to(Name::id("n").refer()),
         )
         .then(
-            Name::id("Add")
+            (Name::id("Add")
                 .sym()
                 .mtch()
                 .app(Name::id("l").bind())
                 .app(Name::id("r").bind())
-                .this()
-                .dot(Name::id("Eval").sym())
-                .goes_to(
-                    Name::id("plus")
-                        .refer()
-                        .app(Name::id("l").refer().dot(Name::id("Eval").sym()))
-                        .app(Name::id("r").refer().dot(Name::id("Eval").sym())),
-                ),
+                .decons())
+            .this()
+            .dot(Name::id("Eval").sym())
+            .goes_to(
+                Name::id("plus")
+                    .refer()
+                    .app(Name::id("l").refer().dot(Name::id("Eval").sym()))
+                    .app(Name::id("r").refer().dot(Name::id("Eval").sym())),
+            ),
         )
         .then(
-            Name::id("Mul")
+            (Name::id("Mul")
                 .sym()
                 .mtch()
                 .app(Name::id("l").bind())
                 .app(Name::id("r").bind())
-                .this()
-                .dot(Name::id("Eval").sym())
-                .goes_to(
-                    Name::id("times")
-                        .refer()
-                        .app(Name::id("l").refer().dot(Name::id("Eval").sym()))
-                        .app(Name::id("r").refer().dot(Name::id("Eval").sym())),
-                ),
+                .decons())
+            .this()
+            .dot(Name::id("Eval").sym())
+            .goes_to(
+                Name::id("times")
+                    .refer()
+                    .app(Name::id("l").refer().dot(Name::id("Eval").sym()))
+                    .app(Name::id("r").refer().dot(Name::id("Eval").sym())),
+            ),
         );
 
     compare_output(&ex10);
 
-    let math_ex = whole_input(modul()).easy_parse("    
+    let math_ex = whole_input(modul())
+        .easy_parse(
+            "    
         fact(0) = 1;
         fact(n) = times(n)(fact(minus(n)(1)));
-    ").map(|(v, _s)| v).unwrap();
+    ",
+        )
+        .map(|(v, _s)| v)
+        .unwrap();
 
-    /* 
+    /*
     println!("{}", math_ex);
     assert_eq!(
         math_ex,
@@ -275,9 +283,4 @@ fn main() {
 
         // eval
     }
-
 }
-
-
-
-
