@@ -168,6 +168,49 @@ where
     between(char('(').skip(spaces()), char(')').skip(spaces()), pat_).map(DeconsOp::App)
 }
 
+#[test]
+fn decons_op_test() {
+    assert_eq!(
+        decons_op().easy_parse("(x)").map(|(v, _s)| v),
+        Ok(DeconsOp::App(Name::id("x").bind()))
+    );
+
+    assert_eq!(
+        decons_op().easy_parse("(X)").map(|(v, _s)| v),
+        Ok(DeconsOp::App(Name::id("X").sym().mtch().decons()))
+		);
+}
+
+#[test]
+fn decons_test() {
+    assert_eq!(
+        decons().easy_parse("123").map(|(v, _s)| v),
+        Ok(Lit::int(123).mtch())
+    );
+
+    assert_eq!(
+        decons().easy_parse("\"text\"").map(|(v, _s)| v),
+        Ok(Lit::str("text".to_owned()).mtch())
+    );
+
+    assert_eq!(
+        decons().easy_parse("F(x)(y)").map(|(v, _s)| v),
+        Ok((Name::id("F").sym().mtch())
+            .app(Name::id("x").bind())
+            .app(Name::id("y").bind())
+					 )
+    );
+
+    assert_eq!(
+        decons().easy_parse("G(1)(a)(b)").map(|(v, _s)| v),
+        Ok((Name::id("G").sym().mtch())
+            .app(Lit::int(1).mtch().decons())
+            .app(Name::id("a").bind())
+            .app(Name::id("b").bind())
+            )
+    );
+}
+
 fn pat<I>() -> impl Parser<I, Output = Pat>
 where
     I: Stream<Token = char>,
