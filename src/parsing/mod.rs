@@ -304,6 +304,7 @@ fn pat_test() {
                     .decons()
             )
             .app(Lit::Flt(1.002).mtch().decons())
+            .app(Name::id("v").bind())
             .decons())
     );
 }
