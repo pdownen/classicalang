@@ -143,7 +143,7 @@ where
     lower()
         .and(many(satisfy(|c: char| {
             c.is_alphanumeric() || c == '_' || c == '\''
-        })))
+        }))).skip(spaces())
         .map(|(c, mut s): (char, String)| {
             s.insert(0, c);
             Name::id(&s)
