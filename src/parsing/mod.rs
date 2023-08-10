@@ -16,7 +16,7 @@ use combine::{
         repeat::take_until,
         sequence,
     },
-    satisfy, sep_by, value, EasyParser, Parser, StdParseResult, Stream,
+    satisfy, sep_by, token, tokens, value, EasyParser, Parser, StdParseResult, Stream,
 };
 
 fn natural<I>() -> impl Parser<I, Output = i64>
@@ -143,7 +143,8 @@ where
     lower()
         .and(many(satisfy(|c: char| {
             c.is_alphanumeric() || c == '_' || c == '\''
-        }))).skip(spaces())
+        })))
+        .skip(spaces())
         .map(|(c, mut s): (char, String)| {
             s.insert(0, c);
             Name::id(&s)
@@ -178,7 +179,7 @@ fn decons_op_test() {
     assert_eq!(
         decons_op().easy_parse("(X)").map(|(v, _s)| v),
         Ok(DeconsOp::App(Name::id("X").sym().mtch().decons()))
-		);
+    );
 }
 
 #[test]
@@ -197,8 +198,7 @@ fn decons_test() {
         decons().easy_parse("F(x)(y)").map(|(v, _s)| v),
         Ok((Name::id("F").sym().mtch())
             .app(Name::id("x").bind())
-            .app(Name::id("y").bind())
-					 )
+            .app(Name::id("y").bind()))
     );
 
     assert_eq!(
@@ -206,8 +206,7 @@ fn decons_test() {
         Ok((Name::id("G").sym().mtch())
             .app(Lit::int(1).mtch().decons())
             .app(Name::id("a").bind())
-            .app(Name::id("b").bind())
-            )
+            .app(Name::id("b").bind()))
     );
 }
 
@@ -404,15 +403,10 @@ fn expr_op<I>() -> impl Parser<I, Output = ExprOp>
 where
     I: Stream<Token = char>,
 {
-    let expr_: fn(&mut I) -> StdParseResult<Expr, I> = |input| expr().parse_stream(input).into();
-
-    between(
-        char('(').skip(spaces()),
-        char(')'),
-        expr_.map(|e| ExprOp::App(e)),
-    )
-    .or(spaces().with(char('.').skip(spaces()).with(lit().map(|l| ExprOp::Dot(l)))))
-    .skip(spaces())
+    atomic_expr()
+        .map(ExprOp::App)
+        .or(spaces().with(char('.').skip(spaces()).with(lit().map(|l| ExprOp::Dot(l)))))
+        .skip(spaces())
 }
 
 fn expr_tail<I>() -> impl Parser<I, Output = ExprTail>
@@ -426,9 +420,22 @@ fn expr<I>() -> impl Parser<I, Output = Expr>
 where
     I: Stream<Token = char>,
 {
-    expr_head()
+    atomic_expr()
         .and(expr_tail())
-        .map(|(h, t): (ExprHead, ExprTail)| h.head().extend(t))
+        .map(|(h, t): (Expr, ExprTail)| h.extend(t))
+}
+
+fn atomic_expr<I>() -> impl Parser<I, Output = Expr>
+where
+    I: Stream<Token = char>,
+{
+    let expr_: fn(&mut I) -> StdParseResult<Expr, I> = |input| expr().parse_stream(input).into();
+
+    expr_head().map(ExprHead::head).or(between(
+        char('(').skip(spaces()),
+        char(')').skip(spaces()),
+        expr_,
+    ))
 }
 
 #[test]
@@ -482,11 +489,18 @@ where
             .with(expr())
             .map(|expr| Decl::Include(expr)),
     )
-    .or(copat()
-        .skip(char('='))
+    .or(attempt(
+        copat()
+            .skip(string("->"))
+            .skip(spaces())
+            .and(expr())
+            .map(|(copat, expr)| Decl::Method(copat, expr)),
+    ))
+    .or(pat()
+        .skip(string("<-"))
         .skip(spaces())
         .and(expr())
-        .map(|(copat, expr)| Decl::Method(copat, expr)))
+        .map(|(pat, expr)| Decl::Bind(pat, expr)))
 }
 
 #[test]
@@ -501,7 +515,7 @@ fn decl_test() {
     );
 
     assert_eq!(
-        decl().easy_parse("five = 5").map(|(v, _s)| v),
+        decl().easy_parse("five <- 5").map(|(v, _s)| v),
         Ok(Decl::Method(
             Name::id("five").bind().this(),
             Lit::Int(5).cnst()
@@ -527,8 +541,8 @@ where
 fn modul_test() {
     let input = "
         include Symbol;
-        x = 1;
-        y = 2;
+        x <- 1;
+        y <- 2;
     ";
 
     let expected_defns = vec![
@@ -537,7 +551,7 @@ fn modul_test() {
         Decl::Method(Name::id("y").bind().this(), Lit::Int(2).cnst()),
     ];
 
-    let result = modul().easy_parse(input);
+    let result = whole_input(modul()).easy_parse(input);
 
     match result {
         Ok((parsed_modul, _)) => {

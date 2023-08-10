@@ -251,8 +251,8 @@ fn main() {
     let math_ex = whole_input(modul())
         .easy_parse(
             "    
-        fact(0) = 1;
-        fact(n) = times(n)(fact(minus(n)(1)));
+        fact(0) -> 1;
+        fact(n) -> times(n)(fact(minus(n)(1)));
     ",
         )
         .map(|(v, _s)| v)
@@ -266,6 +266,8 @@ fn main() {
     );
     */
 
+    
+
     loop {
         let stdin = std::io::stdin();
         for line in stdin.lock().lines() {
@@ -276,8 +278,6 @@ fn main() {
                 Err(e) => println!("{e}"),
             };
         }
-
-        // add input + parse -> output
 
         // store input parse result
 

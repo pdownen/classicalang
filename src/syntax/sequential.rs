@@ -61,18 +61,21 @@ impl fmt::Display for Modul {
 }
 
 // Decl ::= include Expr
-//        | Copat = Expr
+//        | Copat -> Expr
+//        | Pat <- Expr
 #[derive(Debug, PartialEq)]
 pub enum Decl {
     Include(Expr),
     Method(Copat, Expr),
+    Bind(Pat, Expr)
 }
 
 impl fmt::Display for Decl {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Decl::Include(e) => write!(f, "include {}", e),
-            Decl::Method(q, e) => write!(f, "{} = {}", q, e),
+            Decl::Method(q, e) => write!(f, "{} -> {}", q, e),
+            Decl::Bind(p, e) => write!(f, "{} <- {}", p, e),
         }
     }
 }
