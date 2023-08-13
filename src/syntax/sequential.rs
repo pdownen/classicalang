@@ -179,7 +179,7 @@ impl fmt::Display for Expr {
 // Sym = any identifier name starting with an upper case letter
 
 // Lit ::= Int | Flt | Str | Sym
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Lit {
     Int(i64),
     Flt(f64),
