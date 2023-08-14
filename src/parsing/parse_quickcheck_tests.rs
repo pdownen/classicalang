@@ -38,6 +38,19 @@ fn lit_int_parses<'a>(num: i64) -> bool {
     }
 }
 
+/* 
+#[quickcheck]
+fn lit_flt_parses<'a>(num: f64) -> bool {
+    let x = num.to_string();
+
+    let result = lit().easy_parse(x.as_str());
+    match result {
+        Ok((v, _s)) => Lit::flt(num) == v,
+        Err(_) => false,
+    }
+}
+*/
+
 #[quickcheck]
 fn lit_quoted_str_parses(str: String) -> bool {
     let quoted_str = '"'.to_string() + str.as_str() + "\"";
