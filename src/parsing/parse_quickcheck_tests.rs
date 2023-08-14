@@ -28,6 +28,17 @@ impl Arbitrary for Lit {
 }
 
 #[quickcheck]
+fn lit_int_parses<'a>(num: i64) -> bool {
+    let x = num.to_string();
+
+    let result = lit().easy_parse(x.as_str());
+    match result {
+        Ok((v, _s)) => Lit::int(num) == v,
+        Err(_) => false,
+    }
+}
+
+#[quickcheck]
 fn lit_quoted_str_parses(str: String) -> bool {
     let str = '"'.to_string() + str.as_str() + "\"";
 
