@@ -30,7 +30,6 @@ impl Arbitrary for Lit {
 #[quickcheck]
 fn lit_int_parses<'a>(num: i64) -> bool {
     let x = num.to_string();
-    println!("{num}");
 
     let result = lit().easy_parse(x.as_str());
     match result {
