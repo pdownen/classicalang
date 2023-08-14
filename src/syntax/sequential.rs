@@ -108,7 +108,10 @@ fn format_modul(modul: &Modul) -> String {
 }
 
 fn indent(text: String) -> String {
-    text.lines().map(|line| format!("  {}", line)).collect::<Vec<String>>().join("\n")
+    text.lines()
+        .map(|line| format!("  {}", line))
+        .collect::<Vec<String>>()
+        .join("\n")
 }
 
 // Decl ::= include Expr
@@ -118,7 +121,7 @@ fn indent(text: String) -> String {
 pub enum Decl {
     Include(Expr),
     Method(Copat, Expr),
-    Bind(Pat, Expr)
+    Bind(Pat, Expr),
 }
 
 impl fmt::Display for Decl {
@@ -126,11 +129,15 @@ impl fmt::Display for Decl {
         match self {
             Decl::Include(e) => write!(f, "include {}", e),
             Decl::Method(q, e) => {
-                let doc: RcDoc<'_> = RcDoc::text(q.to_string()).append(RcDoc::text(" -> ")).append(RcDoc::text(e.to_string()));
+                let doc: RcDoc<'_> = RcDoc::text(q.to_string())
+                    .append(RcDoc::text(" -> "))
+                    .append(RcDoc::text(e.to_string()));
                 write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
             }
             Decl::Bind(p, e) => {
-                let doc: RcDoc<'_> = RcDoc::text(p.to_string()).append(RcDoc::text(" <- ")).append(RcDoc::text(e.to_string()));
+                let doc: RcDoc<'_> = RcDoc::text(p.to_string())
+                    .append(RcDoc::text(" <- "))
+                    .append(RcDoc::text(e.to_string()));
                 write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
             }
         }
@@ -178,6 +185,10 @@ impl ExprHead {
 }
 
 impl Expr {
+    pub fn is_atomic(&self) -> bool {
+        self.tail.is_empty()
+    }
+
     pub fn push(mut self, op: ExprOp) -> Expr {
         self.tail.push(op);
         self
@@ -282,7 +293,6 @@ impl Lit {
     }
 }
 
-
 impl fmt::Display for Lit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let doc = match self {
@@ -313,6 +323,10 @@ pub struct Copat {
 }
 
 impl Copat {
+    pub fn is_atomic(&self) -> bool {
+        self.tail.is_empty()
+    }
+
     pub fn goes_to(self, rhs: Expr) -> Decl {
         Decl::Method(self, rhs)
     }
@@ -404,6 +418,13 @@ impl Decons {
 }
 
 impl Pat {
+    pub fn is_atomic(&self) -> bool {
+        match self {
+            Pat::Struc(d) => d.tail.is_empty(),
+            _ => true,
+        }
+    }
+
     pub fn blank() -> Pat {
         Pat::Unused
     }
