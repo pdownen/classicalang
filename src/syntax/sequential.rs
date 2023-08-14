@@ -151,30 +151,42 @@ impl Expr {
 
 impl fmt::Display for ExprHead {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ExprHead::Var(x) => write!(f, "{}", x),
-            ExprHead::Const(c) => write!(f, "{}", c),
-            ExprHead::Lambda(l) => write!(f, "{{{l}}}"),
-        }
+        let doc = match self {
+            ExprHead::Var(x) => RcDoc::<()>::text(x.to_string()),
+            ExprHead::Const(c) => RcDoc::<()>::text(c.to_string()),
+            ExprHead::Lambda(l) => RcDoc::<()>::text(format!("{{{}}}", l)),
+        };
+        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
     }
 }
 
 impl fmt::Display for ExprOp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ExprOp::App(a) => write!(f, "({})", a),
-            ExprOp::Dot(m) => write!(f, ".{}", m),
-        }
+        let doc = match self {
+            ExprOp::App(a) => RcDoc::<()>::text(format!("({})", a)),
+            ExprOp::Dot(m) => RcDoc::<()>::text(format!(".{}", m)),
+        };
+        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
     }
 }
 
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.head)?;
-        for op in &self.tail {
-            write!(f, "{}", op)?
-        }
-        Ok(())
+        let head_str = self.head.to_string();
+        let head_doc: RcDoc<'_> = RcDoc::text(&head_str);
+
+        let op_docs: Vec<RcDoc<'_>> = self
+            .tail
+            .iter()
+            .map(|op| {
+                let op_str = op.to_string();
+                RcDoc::text(op_str)
+            })
+            .collect();
+
+        let doc = RcDoc::concat(vec![head_doc].into_iter().chain(op_docs));
+
+        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
     }
 }
 
