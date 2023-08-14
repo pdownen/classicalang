@@ -29,8 +29,7 @@ impl Arbitrary for Lit {
 
 #[quickcheck]
 fn lit_quoted_str_parses(str: String) -> bool {
-    let str = '"'.to_string() + str.as_str();
-    let str = str + "\"";
+    let str = '"'.to_string() + str.as_str() + "\"";
 
     let result = lit().easy_parse(str.as_str());
     match result {
