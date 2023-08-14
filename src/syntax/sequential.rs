@@ -3,7 +3,7 @@ use std::fmt;
 
 pub const MAX_LINE_WIDTH: usize = 80;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone)]
 pub struct Name {
     pub id: String,
 }
@@ -27,6 +27,14 @@ impl Name {
 }
 
 impl fmt::Display for Name {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let allocator: Arena<'_, ()> = pretty::Arena::new();
+        let doc = allocator.text(&self.id);
+        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
+    }
+}
+
+impl fmt::Debug for Name {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let allocator: Arena<'_, ()> = pretty::Arena::new();
         let doc = allocator.text(&self.id);
@@ -69,11 +77,11 @@ fn format_defn(defn: &Decl) -> String {
         Decl::Include(e) => format!("include {}", e),
         Decl::Method(q, e) => {
             let expr_str = format_expr(e);
-            format!("{} -> {}", q, expr_str)
+            format!("{} -> {}\n", q, indent(expr_str))
         }
         Decl::Bind(p, e) => {
             let expr_str = format_expr(e);
-            format!("{} <- {}", p, expr_str)
+            format!("\n{} <- {}", p, expr_str)
         }
     }
 }
