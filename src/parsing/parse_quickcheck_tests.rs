@@ -40,9 +40,9 @@ fn lit_int_parses<'a>(num: i64) -> bool {
 
 #[quickcheck]
 fn lit_quoted_str_parses(str: String) -> bool {
-    let str = '"'.to_string() + str.as_str() + "\"";
+    let quoted_str = '"'.to_string() + str.as_str() + "\"";
 
-    let result = lit().easy_parse(str.as_str());
+    let result = lit().easy_parse(quoted_str.as_str());
     match result {
         Ok((v, _s)) => Lit::str(str.clone()) == v,
         Err(_) => false,
