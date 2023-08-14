@@ -58,10 +58,9 @@ impl Modul {
 
 impl fmt::Display for Modul {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for d in &self.defns {
-            writeln!(f, "{};", d)?;
-        }
-        Ok(())
+        let defn_docs: Vec<RcDoc<'_>> = self.defns.iter().map(|d| RcDoc::text(format!("{};", d))).collect();
+        let doc = RcDoc::intersperse(defn_docs, RcDoc::hardline());
+        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
     }
 }
 
@@ -79,8 +78,14 @@ impl fmt::Display for Decl {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Decl::Include(e) => write!(f, "include {}", e),
-            Decl::Method(q, e) => write!(f, "{} -> {}", q, e),
-            Decl::Bind(p, e) => write!(f, "{} <- {}", p, e),
+            Decl::Method(q, e) => {
+                let doc: RcDoc<'_> = RcDoc::text(q.to_string()).append(RcDoc::text(" -> ")).append(RcDoc::text(e.to_string()));
+                write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
+            }
+            Decl::Bind(p, e) => {
+                let doc: RcDoc<'_> = RcDoc::text(p.to_string()).append(RcDoc::text(" <- ")).append(RcDoc::text(e.to_string()));
+                write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
+            }
         }
     }
 }
