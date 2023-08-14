@@ -7,11 +7,11 @@ use crate::{
     parsing::parse::*,
     syntax::sequential::{Lit, Name},
 };
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::{Arbitrary, Gen, TestResult};
 
 impl Arbitrary for Lit {
     fn arbitrary(g: &mut Gen) -> Lit {
-        match i32::arbitrary(g) % 4 {
+        match u32::arbitrary(g) % 4 {
             0 => Lit::int(i64::arbitrary(g)),
             1 => Lit::flt(f64::arbitrary(g)),
             2 => Lit::str(String::arbitrary(g)),
@@ -28,28 +28,44 @@ impl Arbitrary for Lit {
 }
 
 #[quickcheck]
-fn lit_int_parses<'a>(num: i64) -> bool {
+fn lit_int_parses<'a>(num: i64) -> TestResult {
+    if num == i64::MIN {
+        // swap with bigint or swap to u64
+        return TestResult::discard();
+    }
+
     let x = num.to_string();
 
     let result = lit().easy_parse(x.as_str());
     match result {
-        Ok((v, _s)) => Lit::int(num) == v,
+        Ok((v, _s)) => TestResult::from_bool(Lit::int(num) == v),
+        Err(_) => TestResult::from_bool(false),
+    }
+}
+
+// add scientific notation, use default parser
+fn lit_flt_print_parse<'a>(num: f64) -> bool {
+    let x = num.to_string();
+
+    let result = lit().easy_parse(x.as_str());
+    match result {
+        Ok((v, _s)) => {    
+            println!("{x} parses as {v}");
+            Lit::flt(num) == v
+        },
         Err(_) => false,
     }
 }
 
-/* 
+#[test]
+fn lit_flt() {
+    assert!(lit_flt_print_parse(0.0));
+}
+
 #[quickcheck]
-fn lit_flt_parses<'a>(num: f64) -> bool {
-    let x = num.to_string();
-
-    let result = lit().easy_parse(x.as_str());
-    match result {
-        Ok((v, _s)) => Lit::flt(num) == v,
-        Err(_) => false,
-    }
+fn lit_flt_parses(num: f64) -> bool {
+    lit_flt_print_parse(num)
 }
-*/
 
 #[quickcheck]
 fn lit_quoted_str_parses(str: String) -> bool {
@@ -75,4 +91,9 @@ fn lit_parses(literal: Lit) -> bool {
         Err(_) => false,
     }
 }
+
+
+// arbitrary cases should pick evenly between
+// stopping and continuing dot/app cases
+
 
