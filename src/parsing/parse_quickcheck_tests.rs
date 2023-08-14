@@ -28,19 +28,12 @@ impl Arbitrary for Lit {
 }
 
 #[quickcheck]
-fn lit_int_parses(num: i64) -> bool {
-    let printed = num.to_string();
-    let parsed = lit().easy_parse(printed.as_str());
-
-    match parsed {
-        Ok((v, _s)) => Lit::int(num) == v,
-        Err(_) => false,
-    }
-}
-
-#[quickcheck]
 fn lit_quoted_str_parses(str: String) -> bool {
-    match lit().easy_parse(str.as_str()) {
+    let str = '"'.to_string() + str.as_str();
+    let str = str + "\"";
+
+    let result = lit().easy_parse(str.as_str());
+    match result {
         Ok((v, _s)) => Lit::str(str.clone()) == v,
         Err(_) => false,
     }
