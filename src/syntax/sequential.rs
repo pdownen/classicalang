@@ -357,30 +357,31 @@ impl Pat {
 
 impl fmt::Display for Pat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Pat::Unused => write!(f, "_"),
-            Pat::Var(x) => write!(f, "{}", x),
-            Pat::Struc(s) => write!(f, "{}", s),
-        }
+        let doc = match self {
+            Pat::Unused => RcDoc::<()>::text("_"),
+            Pat::Var(x) => RcDoc::<()>::text(x.to_string()),
+            Pat::Struc(s) => RcDoc::<()>::text(s.to_string()),
+        };
+        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
     }
 }
 
 impl fmt::Display for DeconsOp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            DeconsOp::App(p) => write!(f, "({})", p),
-        }
+        let doc = match self {
+            DeconsOp::App(p) => RcDoc::<()>::text(format!("({})", p)),
+        };
+        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
     }
 }
 
 impl fmt::Display for Decons {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.head)?;
-
+        let mut doc: RcDoc<'_, ()> = RcDoc::nil();
+        doc = doc.append(RcDoc::text(self.head.to_string()));
         for op in &self.tail {
-            write!(f, "{}", op)?
+            doc = doc.append(RcDoc::text(op.to_string()));
         }
-
-        Ok(())
+        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
     }
 }
