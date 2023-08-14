@@ -277,22 +277,22 @@ impl Copat {
 
 impl fmt::Display for CopatOp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            CopatOp::App(p) => write!(f, "({})", p),
-            CopatOp::Dot(c) => write!(f, ".{}", c),
-        }
+        let doc = match self {
+            CopatOp::App(p) => RcDoc::<()>::text(format!("({})", p)),
+            CopatOp::Dot(c) => RcDoc::<()>::text(format!(".{}", c)),
+        };
+        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
     }
 }
 
 impl fmt::Display for Copat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.head)?;
-
+        let mut doc: RcDoc<'_, ()> = RcDoc::nil();
+        doc = doc.append(RcDoc::text(self.head.to_string()));
         for op in &self.tail {
-            write!(f, "{}", op)?
+            doc = doc.append(RcDoc::text(op.to_string()));
         }
-
-        Ok(())
+        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
     }
 }
 
