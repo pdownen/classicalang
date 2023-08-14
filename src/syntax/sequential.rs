@@ -174,7 +174,6 @@ impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let head_str = self.head.to_string();
         let head_doc: RcDoc<'_> = RcDoc::text(&head_str);
-
         let op_docs: Vec<RcDoc<'_>> = self
             .tail
             .iter()
@@ -183,9 +182,7 @@ impl fmt::Display for Expr {
                 RcDoc::text(op_str)
             })
             .collect();
-
         let doc = RcDoc::concat(vec![head_doc].into_iter().chain(op_docs));
-
         write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
     }
 }
