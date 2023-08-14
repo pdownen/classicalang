@@ -26,19 +26,20 @@ impl Arbitrary for Lit {
         }
     }
 }
-/* 
+
 #[quickcheck]
-fn lit_int_parses<'a>(num: i64) -> bool {
-    let x = num.to_string().clone();
-    let y = x.as_str();
-    match lit().easy_parse(y) {
+fn lit_int_parses(num: i64) -> bool {
+    let printed = num.to_string();
+    let parsed = lit().easy_parse(printed.as_str());
+
+    match parsed {
         Ok((v, _s)) => Lit::int(num) == v,
         Err(_) => false,
     }
 }
 
 #[quickcheck]
-fn lit_quoted_str_parses<'a>(str: String) -> bool {
+fn lit_quoted_str_parses(str: String) -> bool {
     match lit().easy_parse(str.as_str()) {
         Ok((v, _s)) => Lit::str(str.clone()) == v,
         Err(_) => false,
@@ -46,14 +47,12 @@ fn lit_quoted_str_parses<'a>(str: String) -> bool {
 }
 
 #[quickcheck]
-fn lit_parses<'a>(literal: Lit) -> bool {
-    let x = literal.to_string();
-    let y: &str = x.as_str();
+fn lit_parses(literal: Lit) -> bool {
+    let printed = literal.to_string();
+    let parsed = lit().easy_parse(printed.as_str());
 
-    match lit().easy_parse(y) {
+    match parsed {
         Ok((v, _s)) => v == literal,
         Err(_) => false,
     }
 }
-*/
-
