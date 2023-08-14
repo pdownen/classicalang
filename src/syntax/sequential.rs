@@ -1,4 +1,7 @@
+use pretty::{Arena, DocAllocator, DocBuilder, RcDoc};
 use std::fmt;
+
+pub const MAX_LINE_WIDTH: usize = 80;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Name {
@@ -25,7 +28,9 @@ impl Name {
 
 impl fmt::Display for Name {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.id)
+        let allocator: Arena<'_, ()> = pretty::Arena::new();
+        let doc = allocator.text(&self.id);
+        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
     }
 }
 
@@ -216,14 +221,16 @@ impl Lit {
     }
 }
 
+
 impl fmt::Display for Lit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Lit::Int(i) => write!(f, "{}", i),
-            Lit::Flt(n) => write!(f, "{}", n),
-            Lit::Str(s) => write!(f, "{:?}", s),
-            Lit::Sym(s) => write!(f, "{}", s),
-        }
+        let doc = match self {
+            Lit::Int(i) => RcDoc::<()>::text(i.to_string()),
+            Lit::Flt(n) => RcDoc::<()>::text(n.to_string()),
+            Lit::Str(s) => RcDoc::<()>::text(format!("{:?}", s)),
+            Lit::Sym(s) => RcDoc::<()>::text(s.to_string()),
+        };
+        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
     }
 }
 
