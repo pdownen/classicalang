@@ -77,7 +77,7 @@ fn format_defn(defn: &Decl) -> String {
         Decl::Include(e) => format!("include {}", e),
         Decl::Method(q, e) => {
             let expr_str = format_expr(e);
-            format!("{} -> {}\n", q, indent(expr_str))
+            format!("{} -> {}\n", q, expr_str)
         }
         Decl::Bind(p, e) => {
             let expr_str = format_expr(e);
@@ -226,6 +226,7 @@ impl fmt::Display for ExprHead {
 impl fmt::Display for ExprOp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let doc = match self {
+            ExprOp::App(a) if a.is_atomic() => RcDoc::<()>::text(format!(" {}", a)),
             ExprOp::App(a) => RcDoc::<()>::text(format!("({})", a)),
             ExprOp::Dot(m) => RcDoc::<()>::text(format!(".{}", m)),
         };
@@ -353,6 +354,7 @@ impl Copat {
 impl fmt::Display for CopatOp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let doc = match self {
+            CopatOp::App(p) if p.is_atomic() => RcDoc::<()>::text(format!(" {}", p)),
             CopatOp::App(p) => RcDoc::<()>::text(format!("({})", p)),
             CopatOp::Dot(c) => RcDoc::<()>::text(format!(".{}", c)),
         };
@@ -451,6 +453,7 @@ impl fmt::Display for Pat {
 impl fmt::Display for DeconsOp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let doc = match self {
+            DeconsOp::App(p) if p.is_atomic() => RcDoc::<()>::text(format!(" {}", p)),
             DeconsOp::App(p) => RcDoc::<()>::text(format!("({})", p)),
         };
         write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))

@@ -30,6 +30,7 @@ impl Arbitrary for Lit {
 #[quickcheck]
 fn lit_int_parses<'a>(num: i64) -> bool {
     let x = num.to_string();
+    println!("{num}");
 
     let result = lit().easy_parse(x.as_str());
     match result {
@@ -53,11 +54,14 @@ fn lit_flt_parses<'a>(num: f64) -> bool {
 
 #[quickcheck]
 fn lit_quoted_str_parses(str: String) -> bool {
-    let quoted_str = '"'.to_string() + str.as_str() + "\"";
+    let quoted_str = Lit::str(str.clone()).to_string();
 
     let result = lit().easy_parse(quoted_str.as_str());
     match result {
-        Ok((v, _s)) => Lit::str(str.clone()) == v,
+        Ok((v, _s)) => {
+            assert_eq!(Lit::str(str.clone()), v);
+            Lit::str(str.clone()) == v
+        },
         Err(_) => false,
     }
 }
@@ -72,3 +76,4 @@ fn lit_parses(literal: Lit) -> bool {
         Err(_) => false,
     }
 }
+
