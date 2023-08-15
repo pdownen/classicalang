@@ -1,5 +1,4 @@
 extern crate quickcheck;
-use std::ffi::CString;
 
 #[cfg(test)]
 use combine::EasyParser;
@@ -22,7 +21,7 @@ impl Arbitrary for Lit {
                 while !c.is_alphabetic() {
                     c = char::arbitrary(g);
                 }
-                let name = c.to_uppercase().to_string() + CString::arbitrary(g).into_string().unwrap().as_str();
+                let name = c.to_uppercase().to_string() + String::arbitrary(g).as_str();
                 Lit::sym(Name::id(name.as_str()))
             }
         }
@@ -52,8 +51,8 @@ fn lit_flt_parses<'a>(num: f64) -> TestResult {
     }
 }
 
-/* 
 // add scientific notation, use default parser
+#[quickcheck]
 fn lit_flt_print_parse<'a>(num: f64) -> bool {
     let x = num.to_string();
 
@@ -67,6 +66,7 @@ fn lit_flt_print_parse<'a>(num: f64) -> bool {
     }
 }
 
+/*
 #[test]
 fn lit_flt() {
     assert!(lit_flt_print_parse(0.0));
