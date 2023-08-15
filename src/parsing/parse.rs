@@ -11,50 +11,59 @@ use combine::{
         self,
         char::{char, digit, lower, spaces, string}
     },
-    satisfy, value, Parser, StdParseResult, Stream,
+    satisfy, value, Parser, StdParseResult, Stream, optional,
 };
 
-pub fn natural<I>() -> impl Parser<I, Output = i64>
+pub fn natural<I>() -> impl Parser<I, Output = String>
 where
     I: Stream<Token = char>,
 {
-    many1(digit()).map(|s: String| s.parse::<i64>().unwrap())
+    many1(digit())
 }
 
-pub fn sign<I>() -> impl Parser<I, Output = i64>
+pub fn sign<I>() -> impl Parser<I, Output = Option<char>>
 where
     I: Stream<Token = char>,
 {
-    (char('-').with(value(-1)))
-        .or(char('+').with(value(1)))
-        .or(value(1))
+    (char('-').map(|c| Some(c)))
+        .or(char('+').with(value(None)))
+        .or(value(None))
 }
 
 pub fn integer<I>() -> impl Parser<I, Output = i64>
 where
     I: Stream<Token = char>,
 {
-    sign().and(natural()).map(|(s, n)| s * n)
+    sign().and(natural()).map(|(s, n)| (
+        s.unwrap_or('0').to_string() + n.as_str()).parse::<i64>().unwrap()
+    )
 }
 
-pub fn float_digits<I>() -> impl Parser<I, Output = f64>
+pub fn float_digits<I>() -> impl Parser<I, Output = String>
 where
     I: Stream<Token = char>,
 {
     many1(digit())
         .skip(char('.'))
         .and(many1(digit()))
-        .map(|(s1, s2): (String, String)| {
-            let s = s1 + "." + s2.as_str();
-            s.parse::<f64>().unwrap()
-        })
+        .and(optional((char('e').or(char('E')).and(natural()))))
+        .map(|((s1, s2,), exp): ((String, String), Option<(char, String)>)| 
+            match exp {
+                None => s1 + "." + s2.as_str(),
+                Some((c, exp)) => s1 + "." + s2.as_str() 
+                    + c.to_string().as_str() 
+                    + exp.as_str()
+            }
+        )
 }
 
 pub fn float<I>() -> impl Parser<I, Output = f64>
 where
     I: Stream<Token = char>,
 {
-    sign().and(float_digits()).map(|(s, f)| (s as f64) * f)
+    sign().and(float_digits()).map(|(s, f)| 
+        (s.unwrap_or('0').to_string() + f.as_str()).parse::<f64>().unwrap()
+    )
 }
 
 pub fn string_quoted<I>() -> impl Parser<I, Output = String>
@@ -62,7 +71,10 @@ where
     I: Stream<Token = char>,
 {
     let string_char = none_of("\"\\".chars());
-    let escape_sequence = char('\\').with(char('"').or(char('\\')).or(char('n').map(|_| '\n')));
+    let escape_sequence = char('\\').with(char('"')
+        .or(char('\\'))
+        .or(char('n').map(|_| '\n'))
+        .or(char('0').map(|_| '\0')));
     // look for other escape sequences
 
     char('"')

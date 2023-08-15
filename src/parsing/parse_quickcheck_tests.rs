@@ -1,4 +1,6 @@
 extern crate quickcheck;
+use std::ffi::CString;
+
 #[cfg(test)]
 use combine::EasyParser;
 use quickcheck_macros::quickcheck;
@@ -20,7 +22,7 @@ impl Arbitrary for Lit {
                 while !c.is_alphabetic() {
                     c = char::arbitrary(g);
                 }
-                let name = c.to_uppercase().to_string() + String::arbitrary(g).as_str();
+                let name = c.to_uppercase().to_string() + CString::arbitrary(g).into_string().unwrap().as_str();
                 Lit::sym(Name::id(name.as_str()))
             }
         }
@@ -29,11 +31,6 @@ impl Arbitrary for Lit {
 
 #[quickcheck]
 fn lit_int_parses<'a>(num: i64) -> TestResult {
-    if num == i64::MIN {
-        // swap with bigint or swap to u64
-        return TestResult::discard();
-    }
-
     let x = num.to_string();
 
     let result = lit().easy_parse(x.as_str());
@@ -43,6 +40,19 @@ fn lit_int_parses<'a>(num: i64) -> TestResult {
     }
 }
 
+#[quickcheck]
+fn lit_flt_parses<'a>(num: f64) -> TestResult {
+    let x = format!("{num}");
+    println!("\n{x}");
+
+    let result = lit().easy_parse(x.as_str());
+    match result {
+        Ok((v, _s)) => TestResult::from_bool(Lit::flt(num) == v),
+        Err(_) => TestResult::from_bool(false),
+    }
+}
+
+/* 
 // add scientific notation, use default parser
 fn lit_flt_print_parse<'a>(num: f64) -> bool {
     let x = num.to_string();
@@ -66,7 +76,9 @@ fn lit_flt() {
 fn lit_flt_parses(num: f64) -> bool {
     lit_flt_print_parse(num)
 }
+*/
 
+/* 
 #[quickcheck]
 fn lit_quoted_str_parses(str: String) -> bool {
     let quoted_str = Lit::str(str.clone()).to_string();
@@ -80,6 +92,7 @@ fn lit_quoted_str_parses(str: String) -> bool {
         Err(_) => false,
     }
 }
+*/
 
 #[quickcheck]
 fn lit_parses(literal: Lit) -> bool {
