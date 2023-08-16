@@ -66,52 +66,13 @@ impl Modul {
 
 impl fmt::Display for Modul {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let defn_docs: Vec<String> = self.defns.iter().map(|d| format_defn(d)).collect();
-        let doc = defn_docs.join("\n");
-        write!(f, "{}", doc)
+        let mut doc = RcDoc::nil();
+        let defn_docs: Vec<RcDoc<'_>> = self.defns.iter().map(|d| RcDoc::text(format!("{};", d))).collect();
+        let doc_with_line_breaks = RcDoc::intersperse(defn_docs, RcDoc::hardline());
+        let indented_doc = doc_with_line_breaks.nest(4);
+        doc = doc.append(indented_doc);
+        write!(f, "\n{}\n", doc.pretty(MAX_LINE_WIDTH))
     }
-}
-
-fn format_defn(defn: &Decl) -> String {
-    match defn {
-        Decl::Include(e) => format!("include {}", e),
-        Decl::Method(q, e) => {
-            let expr_str = format_expr(e);
-            format!("{} -> {}\n", q, expr_str)
-        }
-        Decl::Bind(p, e) => {
-            let expr_str = format_expr(e);
-            format!("\n{} <- {}", p, expr_str)
-        }
-    }
-}
-
-fn format_expr(expr: &Expr) -> String {
-    let head_str = format_expr_head(&expr.head);
-    let mut op_strs: Vec<String> = expr.tail.iter().map(|op| op.to_string()).collect();
-    op_strs.insert(0, head_str);
-    op_strs.join("")
-}
-
-fn format_expr_head(expr_head: &ExprHead) -> String {
-    match expr_head {
-        ExprHead::Var(x) => x.to_string(),
-        ExprHead::Const(c) => c.to_string(),
-        ExprHead::Lambda(l) => format!("{{\n{}\n}}", indent(format_modul(l))),
-    }
-}
-
-fn format_modul(modul: &Modul) -> String {
-    let defn_docs: Vec<String> = modul.defns.iter().map(|d| format_defn(d)).collect();
-    let doc = defn_docs.join("\n");
-    doc
-}
-
-fn indent(text: String) -> String {
-    text.lines()
-        .map(|line| format!("  {}", line))
-        .collect::<Vec<String>>()
-        .join("\n")
 }
 
 // Decl ::= include Expr
