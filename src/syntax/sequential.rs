@@ -2,6 +2,7 @@ use pretty::{Arena, DocAllocator, DocBuilder, RcDoc};
 use std::fmt;
 
 pub const MAX_LINE_WIDTH: usize = 80;
+pub const INDENTATION_WIDTH: isize = 4;
 
 #[derive(PartialEq, Eq, Clone)]
 pub struct Name {
