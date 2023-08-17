@@ -11,7 +11,7 @@ use combine::{
         self,
         char::{char, digit, lower, spaces, string}
     },
-    satisfy, value, Parser, StdParseResult, Stream, optional,
+    satisfy, value, Parser, StdParseResult, Stream, optional, one_of, EasyParser,
 };
 
 pub fn natural<I>() -> impl Parser<I, Output = String>
@@ -21,22 +21,33 @@ where
     many1(digit())
 }
 
-pub fn sign<I>() -> impl Parser<I, Output = Option<char>>
+pub fn sign<'a, I>() -> impl Parser<I, Output = &'a str>
 where
     I: Stream<Token = char>,
 {
-    (char('-').map(|c| Some(c)))
-        .or(char('+').with(value(None)))
-        .or(value(None))
+    string("-").or(optional(string("+")).map(|_| ""))
 }
 
 pub fn integer<I>() -> impl Parser<I, Output = i64>
 where
     I: Stream<Token = char>,
 {
-    sign().and(natural()).map(|(s, n)| (
-        s.unwrap_or('0').to_string() + n.as_str()).parse::<i64>().unwrap()
+    sign().and(natural()).map(|(s, n)| 
+        format!("{s}{n}").parse::<i64>().unwrap()
     )
+}
+
+pub fn float_specials<I>() -> impl Parser<I, Output = String>
+where
+    I: Stream<Token = char>,
+{
+    (attempt(string("inf"))
+        .or(attempt(string("Inf")))
+        .or(attempt(string("INF")))
+        .or(attempt(string("nan")))
+        .or(attempt(string("NAN")))
+        .or(string("NaN")))
+        .map(|s| s.to_string())
 }
 
 pub fn float_digits<I>() -> impl Parser<I, Output = String>
@@ -46,13 +57,14 @@ where
     many1(digit())
         .skip(char('.'))
         .and(many1(digit()))
-        .and(optional((char('e').or(char('E')).and(natural()))))
+        .and(optional((char('e').or(char('E'))).and(natural())))
         .map(|((s1, s2,), exp): ((String, String), Option<(char, String)>)| 
             match exp {
                 None => format!("{s1}.{s2}"),
-                Some((e, exp)) => format!("{s1}.{s2}{e}{exp}")
+                Some((e, expn)) => format!("{s1}.{s2}{e}{expn}")
             }
         )
+    .or(float_specials())
 }
 
 pub fn float<I>() -> impl Parser<I, Output = f64>
@@ -60,7 +72,7 @@ where
     I: Stream<Token = char>,
 {
     sign().and(float_digits()).map(|(s, f)| 
-        (s.unwrap_or('0').to_string() + f.as_str()).parse::<f64>().unwrap()
+        format!("{s}{f}").parse::<f64>().unwrap()
     )
 }
 

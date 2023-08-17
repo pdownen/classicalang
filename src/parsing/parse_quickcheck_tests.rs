@@ -1,7 +1,6 @@
 extern crate quickcheck;
 
-#[cfg(test)]
-use combine::EasyParser;
+use combine::{EasyParser, Parser};
 use quickcheck_macros::quickcheck;
 
 use crate::{
@@ -81,6 +80,7 @@ impl Arbitrary for Lit {
     }
 }
 
+#[cfg(test)]
 #[quickcheck]
 fn lit_int_parses<'a>(num: i64) -> TestResult {
     let x = num.to_string();
@@ -92,47 +92,29 @@ fn lit_int_parses<'a>(num: i64) -> TestResult {
     }
 }
 
-/* 
-#[quickcheck]
-fn lit_flt_parses<'a>(num: f64) -> TestResult {
-    let x = format!("{num}");
-    println!("\n{x}");
-
-    let result = lit().easy_parse(x.as_str());
-    match result {
-        Ok((v, _s)) => TestResult::from_bool(Lit::flt(num) == v),
-        Err(_) => TestResult::from_bool(false),
-    }
-}
-*/
-
-// skipping inf for now
-#[quickcheck]
-fn lit_flt_print_parse<'a>(num: f64) -> bool {
-    if num.is_nan() || num.is_infinite() {
-        return true;
-    }
-
-    let x = format!("{num:?}");
-    let result = lit().easy_parse(x.as_str());
-
-    match result {
-        Ok((v, _s)) => Lit::flt(num) == v,
-        Err(_) => false,
-    }
-}
-
-/*
-#[test]
-fn lit_flt() {
-    assert!(lit_flt_print_parse(0.0));
-}
-
-#[quickcheck]
 fn lit_flt_parses(num: f64) -> bool {
-    lit_flt_print_parse(num)
+    let f = format!("{num:?}");
+    let result = lit().easy_parse(f.as_str());
+
+    match result {
+        Ok((Lit::Flt(f), _s)) => (num == f) || (num.is_nan() && f.is_nan()),
+        _ => false,
+    }
 }
-*/
+
+#[quickcheck]
+fn lit_flt_parses_all(num: f64) -> bool {
+    lit_flt_parses(num)
+}
+
+#[test]
+fn lit_flt_parses_some() {
+    assert!(lit_flt_parses(0.0));
+    assert!(lit_flt_parses(52348746278463287456462238423.0));
+    assert!(lit_flt_parses(f64::INFINITY));
+    assert!(lit_flt_parses(f64::NEG_INFINITY));
+    assert!(lit_flt_parses(f64::NAN));
+}
 
 /* 
 #[quickcheck]
@@ -150,20 +132,31 @@ fn lit_quoted_str_parses(str: String) -> bool {
 }
 */
 
-#[quickcheck]
 fn lit_parses(literal: Lit) -> bool {
-    let printed = {
-        match literal {
-            Lit::Flt(f) => format!("{f:?}"),
-            _ => literal.to_string() 
-        }
-    }; 
+    let printed = literal.to_string(); 
     let parsed = lit().easy_parse(printed.as_str());
 
     match parsed {
+        Ok((Lit::Flt(f), _s)) if f.is_nan() => printed.parse::<f64>().unwrap().is_nan(),
         Ok((v, _s)) => v == literal,
         Err(_) => false,
     }
+}
+
+fn lit_parses_all(lit: Lit) -> bool {
+    lit_parses(lit)
+}
+
+#[test]
+fn lit_parses_some() {
+    assert!(lit_parses(Lit::int(0)));
+    assert!(lit_parses(Lit::int(25)));
+    assert!(lit_parses(Lit::flt(0.0)));
+    assert!(lit_parses(Lit::flt(0.0001235)));
+    assert!(lit_parses(Lit::str("!!@  #### rZ".to_owned())));
+    assert!(lit_parses(Lit::str("\\ \" \\".to_owned())));
+    assert!(lit_parses(Lit::sym(Name::id("Symbol"))));
+    assert!(lit_parses(Lit::sym(Name::id("Symbolic_name2"))));
 }
 
 

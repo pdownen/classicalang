@@ -259,7 +259,7 @@ impl fmt::Display for Lit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let doc = match self {
             Lit::Int(i) => RcDoc::<()>::text(i.to_string()),
-            Lit::Flt(n) => RcDoc::<()>::text(n.to_string()),
+            Lit::Flt(n) => RcDoc::<()>::text(format!("{:?}", n)),
             Lit::Str(s) => RcDoc::<()>::text(format!("{:?}", s)),
             Lit::Sym(s) => RcDoc::<()>::text(s.to_string()),
         };

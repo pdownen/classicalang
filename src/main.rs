@@ -263,8 +263,6 @@ fn main() {
         ex5
     );
     */
-    
-    println!("{:?}", "INF".parse::<f64>().unwrap());
 
     loop {
         let stdin = std::io::stdin();
