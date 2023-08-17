@@ -62,6 +62,10 @@ impl Arbitrary for Name {
 
         Name::id(name.as_str())
     }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        Box::new(self.id.shrink().map(|s| Name { id: s }))
+    }
 }
 
 impl Arbitrary for Lit {
@@ -69,7 +73,7 @@ impl Arbitrary for Lit {
         match u32::arbitrary(g) % 4 {
             0 => Lit::int(i64::arbitrary(g)),
             1 => Lit::flt(f64::arbitrary(g)),
-            _ => Lit::str(AsciiString::arbitrary(g).to_string()),
+            2 => Lit::str(AsciiString::arbitrary(g).to_string()),
             _ => {
                 let mut c: char = char::arbitrary(g);
                 while !c.is_ascii_alphabetic() {
@@ -81,29 +85,16 @@ impl Arbitrary for Lit {
         }
     }
 
-    // fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-    //     match *self {
-    //         Lit::Int(i) => Box::new(Lit::int(i)),
-    //         Lit::Flt(_) => todo!(),
-    //         Lit::Str(_) => todo!(),
-    //         Lit::Sym(_) => todo!(),
-    //     }
-    // }
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        match self {
+            Lit::Int(i) => Box::new(i.shrink().map(Lit::int)),
+            Lit::Flt(f) => Box::new(f.shrink().map(Lit::flt)),
+            Lit::Str(s) => Box::new(s.shrink().map(Lit::str)),
+            Lit::Sym(sym) => Box::new(sym.shrink().map(Lit::sym)),
+        }
+    }
 }
 
-// attempted to do shrink
-// impl Iterator for Lit {
-//     type Item = Lit;
-
-//     fn next(&mut self) -> Option<Self::Item> {
-//         match self {
-//             Lit::Int(i) => Some(Lit::int(i.shrink().next().unwrap())),
-//             Lit::Flt(f) => Some(Lit::flt(f.shrink().next().unwrap())),
-//             Lit::Str(s) => Some(Lit::str(s.shrink().next().unwrap())),
-//             Lit::Sym(_) => todo!(),
-//         }
-//     }
-// }
 
 #[cfg(test)]
 #[quickcheck]
@@ -225,6 +216,14 @@ impl Arbitrary for Pat {
             }
         }
     }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        match self {
+            Pat::Unused => empty_shrinker(),
+            Pat::Var(v) => Box::new(v.shrink().map(Pat::Var)),
+            Pat::Struc(tail) => empty_shrinker(),
+        }
+    }
 }
 
 fn pat_parses(pattern: Pat) -> bool {
@@ -238,7 +237,8 @@ fn pat_parses(pattern: Pat) -> bool {
         {printed}
         {pattern:?}
             parses as 
-        {v:?}"
+        {}
+        {v:?}", v.to_string()
         );
             v == pattern
         },
@@ -246,10 +246,10 @@ fn pat_parses(pattern: Pat) -> bool {
     }
 }
 
-// #[quickcheck]
-// fn pat_parses_all(pat: Pat) -> bool {
-//     pat_parses(pat)
-// }
+#[quickcheck]
+fn pat_parses_all(pat: Pat) -> bool {
+    pat_parses(pat)
+}
 
 #[test]
 fn pat_parses_some() {

@@ -141,8 +141,11 @@ where
 pub fn decons<I>() -> impl Parser<I, Output = Decons>
 where
     I: Stream<Token = char>,
-{
+{   
+    let pat_: fn(&mut I) -> StdParseResult<Pat, I> = |input| pat().parse_stream(input).into();
+
     lit()
+        // .or(between(char('(').skip(spaces()), char(')').skip(spaces()), pat_).map(|c| ))
         .and(spaces().with(many(decons_op())))
         .map(|(c, ops)| c.mtch().extend(ops))
 }
