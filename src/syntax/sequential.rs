@@ -66,12 +66,15 @@ impl Modul {
 
 impl fmt::Display for Modul {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut doc = RcDoc::nil();
-        let defn_docs: Vec<RcDoc<'_>> = self.defns.iter().map(|d| RcDoc::text(format!("{};", d))).collect();
-        let doc_with_line_breaks = RcDoc::intersperse(defn_docs, RcDoc::hardline());
-        let indented_doc = doc_with_line_breaks.nest(4);
-        doc = doc.append(indented_doc);
-        write!(f, "\n{}\n", doc.pretty(MAX_LINE_WIDTH))
+        let doc = RcDoc::intersperse(
+            self.defns
+                .iter()
+                .map(|d| RcDoc::text(format!("{};", d)))
+                .collect::<Vec<RcDoc<'_>>>(),
+            RcDoc::hardline(),
+        )
+        .append(RcDoc::nil());
+        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
     }
 }
 
@@ -195,7 +198,7 @@ impl fmt::Display for ExprHead {
                 RcDoc::<()>::text("{")
                     .append(RcDoc::<()>::line_()
                         .append(formatted_indented_l)
-												.nest(INDENTATION_WIDTH)
+			.nest(INDENTATION_WIDTH)
                         .group())
                     .append(RcDoc::<()>::line())
                     .append(RcDoc::<()>::text("}"))
