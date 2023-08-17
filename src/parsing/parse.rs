@@ -49,10 +49,8 @@ where
         .and(optional((char('e').or(char('E')).and(natural()))))
         .map(|((s1, s2,), exp): ((String, String), Option<(char, String)>)| 
             match exp {
-                None => s1 + "." + s2.as_str(),
-                Some((c, exp)) => s1 + "." + s2.as_str() 
-                    + c.to_string().as_str() 
-                    + exp.as_str()
+                None => format!("{s1}.{s2}"),
+                Some((e, exp)) => format!("{s1}.{s2}{e}{exp}")
             }
         )
 }

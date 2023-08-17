@@ -249,11 +249,9 @@ fn main() {
     compare_output(&ex10);
 
     let math_ex = whole_input(modul())
-        .easy_parse(
-            "    
-        fact(0) -> 1;
-        fact(n) -> times(n)(fact(minus(n)(1)));
-    ",
+        .easy_parse("    
+            fact(0) -> 1;
+            fact(n) -> times(n)(fact(minus(n)(1)));",
         )
         .map(|(v, _s)| v)
         .unwrap();
@@ -266,7 +264,7 @@ fn main() {
     );
     */
     
-    
+    println!("{:?}", "INF".parse::<f64>().unwrap());
 
     loop {
         let stdin = std::io::stdin();
