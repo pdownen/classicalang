@@ -178,7 +178,28 @@ impl fmt::Display for ExprHead {
         let doc = match self {
             ExprHead::Var(x) => RcDoc::<()>::text(x.to_string()),
             ExprHead::Const(c) => RcDoc::<()>::text(c.to_string()),
-            ExprHead::Lambda(l) => RcDoc::<()>::text(format!("{{{}}}", l)),
+            ExprHead::Lambda(l) => {
+                let indented_l = l.defns.iter()
+                    .map(|d| RcDoc::<()>::text(format!("{};", d)))
+                    .map(|doc| doc)
+                    .collect::<Vec<_>>();
+
+                let mut formatted_indented_l = RcDoc::<()>::nil();
+                for (index, line) in indented_l.iter().enumerate() {
+                    if index > 0 {
+                        formatted_indented_l = formatted_indented_l.append(RcDoc::<()>::hardline());
+                    }
+                    formatted_indented_l = formatted_indented_l.append(line.clone());
+                }
+                
+                RcDoc::<()>::text("{")
+                    .append(RcDoc::<()>::line_()
+                        .append(formatted_indented_l)
+												.nest(INDENTATION_WIDTH)
+                        .group())
+                    .append(RcDoc::<()>::line())
+                    .append(RcDoc::<()>::text("}"))
+            }
         };
         write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
     }
