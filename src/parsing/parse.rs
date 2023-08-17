@@ -143,7 +143,7 @@ where
     I: Stream<Token = char>,
 {
     lit()
-        .and(many(decons_op()))
+        .and(spaces().with(many(decons_op())))
         .map(|(c, ops)| c.mtch().extend(ops))
 }
 
@@ -153,7 +153,9 @@ where
 {
     let pat_: fn(&mut I) -> StdParseResult<Pat, I> = |input| pat().parse_stream(input).into();
 
-    between(char('(').skip(spaces()), char(')').skip(spaces()), pat_).map(DeconsOp::App)
+    between(char('(').skip(spaces()), char(')').skip(spaces()), pat_)
+    .or(pat_.skip(spaces()))
+    .map(DeconsOp::App)
 }
 
 pub fn pat<I>() -> impl Parser<I, Output = Pat>

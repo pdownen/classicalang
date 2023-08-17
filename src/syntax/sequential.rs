@@ -365,21 +365,21 @@ impl fmt::Display for Copat {
 
 // DeconsOp ::= (Pat)
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Pat {
     Unused,
     Var(Name),
     Struc(Decons),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum DeconsOp {
     App(Pat),
 }
 
 type DeconsTail = Vec<DeconsOp>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Decons {
     head: Lit,
     tail: DeconsTail,

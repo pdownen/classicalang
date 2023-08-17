@@ -1,15 +1,17 @@
 extern crate quickcheck;
 
+use std::io::LineWriter;
+
 use combine::{EasyParser, Parser};
 use quickcheck_macros::quickcheck;
 
 use crate::{
     parsing::parse::*,
-    syntax::sequential::{Lit, Name},
+    syntax::{sequential::{Lit, Name, Pat, DeconsOp}, nested::Decons},
 };
-use quickcheck::{Arbitrary, Gen, TestResult};
+use quickcheck::{Arbitrary, Gen, TestResult, empty_shrinker};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct AsciiString { str: String }
 
 impl ToString for AsciiString {
@@ -30,7 +32,7 @@ impl Arbitrary for AsciiString {
 
         while u32::arbitrary(g) % 10 != 0 {
             let mut c: char = char::arbitrary(g);
-            while !c.is_ascii() || c.is_ascii_control() {
+            while (!c.is_ascii() || c.is_ascii_control()) && c != '\n' {
                 c = char::arbitrary(g);
             }
             ascii_str.push(c);
@@ -67,7 +69,7 @@ impl Arbitrary for Lit {
         match u32::arbitrary(g) % 4 {
             0 => Lit::int(i64::arbitrary(g)),
             1 => Lit::flt(f64::arbitrary(g)),
-            2 => Lit::str(AsciiString::arbitrary(g).to_string()),
+            _ => Lit::str(AsciiString::arbitrary(g).to_string()),
             _ => {
                 let mut c: char = char::arbitrary(g);
                 while !c.is_ascii_alphabetic() {
@@ -78,7 +80,30 @@ impl Arbitrary for Lit {
             }
         }
     }
+
+    // fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+    //     match *self {
+    //         Lit::Int(i) => Box::new(Lit::int(i)),
+    //         Lit::Flt(_) => todo!(),
+    //         Lit::Str(_) => todo!(),
+    //         Lit::Sym(_) => todo!(),
+    //     }
+    // }
 }
+
+// attempted to do shrink
+// impl Iterator for Lit {
+//     type Item = Lit;
+
+//     fn next(&mut self) -> Option<Self::Item> {
+//         match self {
+//             Lit::Int(i) => Some(Lit::int(i.shrink().next().unwrap())),
+//             Lit::Flt(f) => Some(Lit::flt(f.shrink().next().unwrap())),
+//             Lit::Str(s) => Some(Lit::str(s.shrink().next().unwrap())),
+//             Lit::Sym(_) => todo!(),
+//         }
+//     }
+// }
 
 #[cfg(test)]
 #[quickcheck]
@@ -116,21 +141,28 @@ fn lit_flt_parses_some() {
     assert!(lit_flt_parses(f64::NAN));
 }
 
-/* 
-#[quickcheck]
-fn lit_quoted_str_parses(str: String) -> bool {
-    let quoted_str = Lit::str(str.clone()).to_string();
+fn lit_quoted_str_parses(str: AsciiString) -> bool {
+    let quoted_str = Lit::str(str.to_string()).to_string();
 
     let result = lit().easy_parse(quoted_str.as_str());
     match result {
         Ok((v, _s)) => {
-            assert_eq!(Lit::str(str.clone()), v);
-            Lit::str(str.clone()) == v
+            Lit::str(str.to_string()) == v
         },
         Err(_) => false,
     }
 }
-*/
+
+#[quickcheck]
+fn lit_quoted_str_parses_all(str: AsciiString) -> bool {
+    lit_quoted_str_parses(str)
+}
+
+#[test]
+fn lit_quoted_str_parses_some() {
+    assert!(lit_parses(Lit::str("".to_owned())));
+    assert!(lit_parses(Lit::str("\n\nok\n".to_owned())));
+}
 
 fn lit_parses(literal: Lit) -> bool {
     let printed = literal.to_string(); 
@@ -143,6 +175,7 @@ fn lit_parses(literal: Lit) -> bool {
     }
 }
 
+#[quickcheck]
 fn lit_parses_all(lit: Lit) -> bool {
     lit_parses(lit)
 }
@@ -154,13 +187,79 @@ fn lit_parses_some() {
     assert!(lit_parses(Lit::flt(0.0)));
     assert!(lit_parses(Lit::flt(0.0001235)));
     assert!(lit_parses(Lit::str("!!@  #### rZ".to_owned())));
-    assert!(lit_parses(Lit::str("\\ \" \\".to_owned())));
+    assert!(lit_parses(Lit::str(r#"\\ \" \\"#.to_owned())));
     assert!(lit_parses(Lit::sym(Name::id("Symbol"))));
     assert!(lit_parses(Lit::sym(Name::id("Symbolic_name2"))));
 }
 
 
-// arbitrary cases should pick evenly between
+// arbitrary co/pat cases should pick evenly between
 // stopping and continuing dot/app cases
 
+impl Arbitrary for DeconsOp {
+    fn arbitrary(g: &mut Gen) -> DeconsOp {
+        DeconsOp::App(Pat::arbitrary(g))
+    }
+}
 
+impl Arbitrary for Pat {
+    fn arbitrary(g: &mut Gen) -> Pat {
+        match u32::arbitrary(g) % 4 {
+            0 => Pat::Unused,
+            1 | 2 => {
+                let mut c: char = char::arbitrary(g);
+                while !c.is_ascii_alphabetic() {
+                    c = char::arbitrary(g);
+                }
+                let name = format!("{}{}", c.to_lowercase(), Name::arbitrary(g));
+                Pat::Var(Name::id(name.as_str()))
+            }
+            _ => {
+                let head = Lit::arbitrary(g).mtch();
+                let mut tail = vec![];
+                while u32::arbitrary(g) % 2 != 0 {
+                    tail.push(DeconsOp::arbitrary(g));
+                }
+
+                Pat::Struc(head.extend(tail))
+            }
+        }
+    }
+}
+
+fn pat_parses(pattern: Pat) -> bool {
+    let printed = pattern.to_string(); 
+    let parsed = pat().easy_parse(printed.as_str());
+
+
+    match parsed {
+        Ok((v, _s)) => {
+        println!("
+        {printed}
+        {pattern:?}
+            parses as 
+        {v:?}"
+        );
+            v == pattern
+        },
+        Err(_) => false,
+    }
+}
+
+// #[quickcheck]
+// fn pat_parses_all(pat: Pat) -> bool {
+//     pat_parses(pat)
+// }
+
+#[test]
+fn pat_parses_some() {
+    assert!(pat_parses(
+        Pat::Struc(
+            Lit::Sym(Name::id("Sym")).mtch()
+            .extend(vec![
+                DeconsOp::App(Pat::Struc(Lit::int(1).mtch())),
+                DeconsOp::App(Pat::Unused)
+            ])
+        )
+    ));
+}
