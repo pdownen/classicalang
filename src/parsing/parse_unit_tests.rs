@@ -2,7 +2,7 @@ use combine::EasyParser;
 
 use crate::{
     parsing::parse::*,
-    syntax::sequential::{CopatOp, Decl, DeconsOp, Lit, Name, Pat},
+    syntax::sequential::{AtomicPat, CopatOp, Decl, DeconsOp, Lit, Name, Pat},
 };
 
 use super::parse::{modul, whole_input};
@@ -41,7 +41,7 @@ fn lit_test() {
 fn decons_op_test() {
     assert_eq!(
         decons_op().easy_parse("x").map(|(v, _s)| v),
-        Ok(DeconsOp::App(Name::id("x").bind()))
+        Ok(DeconsOp::App(Name::id("x").bind().atom()))
     );
     assert_eq!(
         decons_op().easy_parse("X").map(|(v, _s)| v),
@@ -68,16 +68,16 @@ fn decons_test() {
     assert_eq!(
         decons().easy_parse("F(x)(y)").map(|(v, _s)| v),
         Ok((Name::id("F").sym().mtch())
-            .app(Name::id("x").bind())
-            .app(Name::id("y").bind()))
+            .app(Name::id("x").bind().atom())
+            .app(Name::id("y").bind().atom()))
     );
 
     assert_eq!(
         decons().easy_parse("G(1)(a)(b)").map(|(v, _s)| v),
         Ok((Name::id("G").sym().mtch())
             .app(Lit::int(1).mtch().decons())
-            .app(Name::id("a").bind())
-            .app(Name::id("b").bind()))
+            .app(Name::id("a").bind().atom())
+            .app(Name::id("b").bind().atom()))
     );
 }
 
@@ -92,8 +92,8 @@ fn pat_test() {
 
     assert_eq!(pat().easy_parse("_").map(|(v, _s)| v), Ok(Pat::blank()));
     assert_eq!(
-        pat().easy_parse("x").map(|(v, _s)| v),
-        Ok(Pat::Var(Name::id("x")))
+        atomic_pat().easy_parse("x").map(|(v, _s)| v),
+        Ok(AtomicPat::Var(Name::id("x")))
     );
 
     assert_eq!(
@@ -140,7 +140,7 @@ fn pat_test() {
             .app(
                 (Lit::Sym(Name::id("X")).mtch())
                     .app(Lit::Int(0).mtch().decons())
-                    .app(Pat::Unused)
+                    .app(AtomicPat::Unused.atom())
                     .decons()
             )
             .app(Lit::Flt(1.002).mtch().decons()))
@@ -157,11 +157,11 @@ fn pat_test() {
             .app(
                 (Lit::Sym(Name::id("X")).mtch())
                     .app(Lit::Int(0).mtch().decons())
-                    .app(Pat::Unused)
+                    .app(AtomicPat::Unused.atom())
                     .decons()
             )
             .app(Lit::Flt(1.002).mtch().decons())
-            .app(Name::id("v").bind())
+            .app(Name::id("v").bind().atom())
             .decons())
     );
 }
@@ -170,7 +170,7 @@ fn pat_test() {
 fn copat_op_test() {
     assert_eq!(
         copat_op().easy_parse("(xariable)").map(|(v, _s)| v),
-        Ok(CopatOp::App(Name::id("xariable").bind()))
+        Ok(CopatOp::App(Name::id("xariable").bind().atom()))
     );
 
     assert_eq!(
@@ -181,26 +181,17 @@ fn copat_op_test() {
     assert_eq!(
         copat().easy_parse("10(y)").map(|(v, _s)| v),
         Ok(Lit::Int(10)
-            .mtch()
-            .app(Name::id("y").bind())
-            .decons()
-            .this())
+            .switch()
+            .this()
+            .app(Name::id("y").bind().atom()))
     );
     assert_eq!(
         copat().easy_parse("X.2").map(|(v, _s)| v),
-        Ok(Lit::Sym(Name::id("X"))
-            .mtch()
-            .decons()
-            .this()
-            .dot(Lit::int(2)))
+        Ok(Lit::Sym(Name::id("X")).switch().this().dot(Lit::int(2)))
     );
     assert_eq!(
         copat().easy_parse("2.X").map(|(v, _s)| v),
-        Ok(Lit::int(2)
-            .mtch()
-            .decons()
-            .this()
-            .dot(Lit::Sym(Name::id("X"))))
+        Ok(Lit::int(2).switch().this().dot(Lit::Sym(Name::id("X"))))
     );
 }
 
@@ -208,11 +199,11 @@ fn copat_op_test() {
 fn copat_test() {
     assert_eq!(
         copat().easy_parse("_").map(|(v, _s)| v),
-        Ok(Pat::blank().this())
+        Ok(AtomicPat::blank().this())
     );
     assert_eq!(
         copat().easy_parse("10.X").map(|(v, _s)| v),
-        Ok(Lit::Int(10).mtch().decons().this().dot(Name::id("X").sym()))
+        Ok(Lit::Int(10).switch().this().dot(Name::id("X").sym()))
     );
     assert_eq!(
         copat().easy_parse("x.20.Z").map(|(v, _s)| v),

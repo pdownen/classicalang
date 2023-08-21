@@ -31,7 +31,7 @@ fn main() {
     let ex3 = Name::id("inc")
         .bind()
         .this()
-        .app(Name::id("x").bind())
+        .app(Name::id("x").bind().atom())
         .goes_to(
             Name::id("plus")
                 .refer()
@@ -47,7 +47,7 @@ fn main() {
             Name::id("area")
                 .bind()
                 .this()
-                .app(Name::id("r").bind())
+                .app(Name::id("r").bind().atom())
                 .goes_to(
                     Name::id("times").refer().app(Name::id("pi").refer()).app(
                         Name::id("Math")
@@ -74,7 +74,7 @@ fn main() {
             Name::id("fact")
                 .bind()
                 .this()
-                .app(Name::id("n").bind())
+                .app(Name::id("n").bind().atom())
                 .goes_to(
                     Name::id("times").refer().app(Name::id("n").refer()).app(
                         Name::id("fact").refer().app(
@@ -112,7 +112,7 @@ fn main() {
             Name::id("stutter")
                 .bind()
                 .this()
-                .app(Name::id("n").bind())
+                .app(Name::id("n").bind().atom())
                 .dot(Name::id("Head").sym())
                 .goes_to(Name::id("n").refer()),
         )
@@ -120,7 +120,7 @@ fn main() {
             Name::id("stutter")
                 .bind()
                 .this()
-                .app(Name::id("n").bind())
+                .app(Name::id("n").bind().atom())
                 .dot(Name::id("Tail").sym())
                 .dot(Name::id("Head").sym())
                 .goes_to(Name::id("n").refer()),
@@ -129,7 +129,7 @@ fn main() {
             Name::id("stutter")
                 .bind()
                 .this()
-                .app(Name::id("n").bind())
+                .app(Name::id("n").bind().atom())
                 .dot(Name::id("Tail").sym())
                 .dot(Name::id("Tail").sym())
                 .goes_to(
@@ -149,8 +149,8 @@ fn main() {
             Name::id("zigzag")
                 .bind()
                 .this()
-                .app(Name::id("e").bind())
-                .app(Name::id("o").bind())
+                .app(Name::id("e").bind().atom())
+                .app(Name::id("o").bind().atom())
                 .dot(Name::id("Head").sym())
                 .goes_to(Name::id("e").refer().dot(Name::id("Head").sym())),
         )
@@ -158,8 +158,8 @@ fn main() {
             Name::id("zigzag")
                 .bind()
                 .this()
-                .app(Name::id("e").bind())
-                .app(Name::id("o").bind())
+                .app(Name::id("e").bind().atom())
+                .app(Name::id("o").bind().atom())
                 .dot(Name::id("Tail").sym())
                 .dot(Name::id("Head").sym())
                 .goes_to(Name::id("o").refer().dot(Name::id("Head").sym())),
@@ -168,8 +168,8 @@ fn main() {
             Name::id("zigzag")
                 .bind()
                 .this()
-                .app(Name::id("e").bind())
-                .app(Name::id("o").bind())
+                .app(Name::id("e").bind().atom())
+                .app(Name::id("o").bind().atom())
                 .dot(Name::id("Tail").sym())
                 .dot(Name::id("Tail").sym())
                 .goes_to(
@@ -206,21 +206,19 @@ fn main() {
         .then(
             (Name::id("Num")
                 .sym()
-                .mtch()
-                .app(Name::id("n").bind())
-                .decons())
-            .this()
+                .switch()
+                .this()
+                .app(Name::id("n").bind().atom()))
             .dot(Name::id("Eval").sym())
             .goes_to(Name::id("n").refer()),
         )
         .then(
             (Name::id("Add")
                 .sym()
-                .mtch()
-                .app(Name::id("l").bind())
-                .app(Name::id("r").bind())
-                .decons())
-            .this()
+                .switch()
+                .this()
+                .app(Name::id("l").bind().atom())
+                .app(Name::id("r").bind().atom()))
             .dot(Name::id("Eval").sym())
             .goes_to(
                 Name::id("plus")
@@ -232,11 +230,10 @@ fn main() {
         .then(
             (Name::id("Mul")
                 .sym()
-                .mtch()
-                .app(Name::id("l").bind())
-                .app(Name::id("r").bind())
-                .decons())
-            .this()
+                .switch()
+                .this()
+                .app(Name::id("l").bind().atom())
+                .app(Name::id("r").bind().atom()))
             .dot(Name::id("Eval").sym())
             .goes_to(
                 Name::id("times")
@@ -249,7 +246,8 @@ fn main() {
     compare_output(&ex10);
 
     let math_ex = whole_input(modul())
-        .easy_parse("    
+        .easy_parse(
+            "    
             fact(0) -> 1;
             fact(n) -> times(n)(fact(minus(n)(1)));",
         )

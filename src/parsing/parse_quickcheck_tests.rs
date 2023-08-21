@@ -8,12 +8,17 @@ use quickcheck_macros::quickcheck;
 
 use crate::{
     parsing::parse::*,
-    syntax::{sequential::{Lit, Name, Pat, DeconsOp, Decons, CopatOp, Copat, ExprOp, Expr, ExprHead, Decl, Modul }}
+    syntax::sequential::{
+        AtomicPat, Copat, CopatOp, Decl, Decons, DeconsOp, Expr, ExprHead, ExprOp, Lit, Modul,
+        Name, Pat,
+    },
 };
-use quickcheck::{Arbitrary, Gen, TestResult, empty_shrinker};
+use quickcheck::{empty_shrinker, Arbitrary, Gen, TestResult};
 
 #[derive(Clone, Debug)]
-struct AsciiString { str: String }
+struct AsciiString {
+    str: String,
+}
 
 impl ToString for AsciiString {
     fn to_string(&self) -> String {
@@ -96,7 +101,6 @@ impl Arbitrary for Lit {
     }
 }
 
-
 #[cfg(test)]
 #[quickcheck]
 fn lit_int_parses<'a>(num: i64) -> TestResult {
@@ -138,9 +142,7 @@ fn lit_quoted_str_parses(str: AsciiString) -> bool {
 
     let result = lit().easy_parse(quoted_str.as_str());
     match result {
-        Ok((v, _s)) => {
-            Lit::str(str.to_string()) == v
-        },
+        Ok((v, _s)) => Lit::str(str.to_string()) == v,
         Err(_) => false,
     }
 }
@@ -157,7 +159,7 @@ fn lit_quoted_str_parses_some() {
 }
 
 fn lit_parses(literal: Lit) -> bool {
-    let printed = literal.to_string(); 
+    let printed = literal.to_string();
     let parsed = lit().easy_parse(printed.as_str());
 
     match parsed {
@@ -184,14 +186,13 @@ fn lit_parses_some() {
     assert!(lit_parses(Lit::sym(Name::id("Symbolic_name2"))));
 }
 
-
 // arbitrary co/pat cases should pick evenly between
 // stopping and continuing dot/app cases
 
 impl Arbitrary for Decons {
     fn arbitrary(g: &mut Gen) -> Self {
         let head = Lit::arbitrary(g).mtch();
-        let mut tail = vec![];
+        let mut tail = vec![DeconsOp::arbitrary(g)];
         while u32::arbitrary(g) % 2 != 0 {
             tail.push(DeconsOp::arbitrary(g));
         }
@@ -203,7 +204,7 @@ impl Arbitrary for Decons {
         Box::new(
             (self.head.clone(), self.tail.clone())
                 .shrink()
-                .map(|(h, t)| h.mtch().extend(t))
+                .map(|(h, t)| h.mtch().extend(t)),
         )
     }
 }
@@ -220,33 +221,49 @@ impl Arbitrary for DeconsOp {
     }
 }
 
-impl Arbitrary for Pat {
-    fn arbitrary(g: &mut Gen) -> Pat {
+impl Arbitrary for AtomicPat {
+    fn arbitrary(g: &mut Gen) -> AtomicPat {
         match u32::arbitrary(g) % 4 {
-            0 => Pat::Unused,
+            0 => AtomicPat::Unused,
             1 | 2 => {
                 let mut c: char = char::arbitrary(g);
                 while !c.is_ascii_alphabetic() {
                     c = char::arbitrary(g);
                 }
                 let name = format!("{}{}", c.to_lowercase(), Name::arbitrary(g));
-                Pat::Var(Name::id(name.as_str()))
+                AtomicPat::Var(Name::id(name.as_str()))
             }
-            _ => Pat::Struc(Decons::arbitrary(g))
+            _ => AtomicPat::Const(Lit::arbitrary(g)),
         }
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         match self {
-            Pat::Unused => empty_shrinker(),
-            Pat::Var(v) => Box::new(v.shrink().map(Pat::Var)),
-            Pat::Struc(tail) => Box::new(tail.shrink().map(Pat::Struc)),
+            AtomicPat::Unused => empty_shrinker(),
+            AtomicPat::Var(v) => Box::new(v.shrink().map(AtomicPat::Var)),
+            AtomicPat::Const(c) => Box::new(c.shrink().map(AtomicPat::Const)),
+        }
+    }
+}
+
+impl Arbitrary for Pat {
+    fn arbitrary(g: &mut Gen) -> Pat {
+        match u32::arbitrary(g) % 3 {
+            0 | 1 => Pat::Atom(AtomicPat::arbitrary(g)),
+            _ => Pat::Struc(Decons::arbitrary(g)),
+        }
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        match self {
+            Pat::Atom(a) => Box::new(a.shrink().map(Pat::Atom)),
+            Pat::Struc(decons) => Box::new(decons.shrink().map(Pat::Struc)),
         }
     }
 }
 
 fn pat_parses(pattern: Pat) -> bool {
-    let printed = pattern.to_string(); 
+    let printed = pattern.to_string();
     let parsed = pat().easy_parse(printed.as_str());
 
     match parsed {
@@ -262,19 +279,18 @@ fn pat_parses_all(pat: Pat) -> bool {
 
 #[test]
 fn pat_parses_some() {
-    assert!(pat_parses(
-        Pat::Struc(
-            Lit::Sym(Name::id("Sym1")).mtch()
-            .extend(vec![
-                DeconsOp::App(Pat::Struc(
-                    Name::id("Sym2").sym().mtch().push(
-                        DeconsOp::App(Pat::Struc(Lit::int(1).mtch())))
-                )),
-                DeconsOp::App(Pat::Unused),
-                DeconsOp::App(Pat::Unused)
-            ])
-        )
-    ));
+    assert!(pat_parses(Pat::Struc(
+        Lit::Sym(Name::id("Sym1")).mtch().extend(vec![
+            DeconsOp::App(Pat::Struc(
+                Name::id("Sym2")
+                    .sym()
+                    .mtch()
+                    .push(DeconsOp::App(Pat::Struc(Lit::int(1).mtch())))
+            )),
+            DeconsOp::App(Pat::blank()),
+            DeconsOp::App(Pat::blank())
+        ])
+    )));
     assert!(pat_parses(pat().easy_parse("Sym1 (Sym2 a b c)").unwrap().0));
 }
 
@@ -282,7 +298,7 @@ impl Arbitrary for CopatOp {
     fn arbitrary(g: &mut Gen) -> Self {
         match u32::arbitrary(g) % 2 {
             0 => CopatOp::App(Pat::arbitrary(g)),
-            _ => CopatOp::Dot(Lit::arbitrary(g))
+            _ => CopatOp::Dot(Lit::arbitrary(g)),
         }
     }
 
@@ -296,7 +312,7 @@ impl Arbitrary for CopatOp {
 
 impl Arbitrary for Copat {
     fn arbitrary(g: &mut Gen) -> Self {
-        let mut copat = Pat::arbitrary(g).this();
+        let mut copat = AtomicPat::arbitrary(g).this();
         while u32::arbitrary(g) % 2 != 0 {
             copat = copat.push(CopatOp::arbitrary(g));
         }
@@ -307,27 +323,28 @@ impl Arbitrary for Copat {
         Box::new(
             (self.head.clone(), self.tail.clone())
                 .shrink()
-                .map(|(h, t)| h.this().extend(t))
+                .map(|(h, t)| h.this().extend(t)),
         )
     }
 }
 
-
 fn copat_parses(copattern: Copat) -> bool {
-    let printed = copattern.to_string(); 
+    let printed = copattern.to_string();
     let parsed = copat().easy_parse(printed.as_str());
 
     match parsed {
         Ok((v, _s)) => {
-        println!("
+            println!(
+                "
         {printed}
         {copattern:?}
             parses as 
         {}
-        {v:?}", v.to_string()
-        );
+        {v:?}",
+                v.to_string()
+            );
             v == copattern
-        },
+        }
         Err(_) => false,
     }
 }
@@ -339,7 +356,9 @@ fn copat_parses_all(copat: Copat) -> bool {
 
 #[test]
 fn copat_parses_some() {
-    assert!(copat_parses(copat().easy_parse("Sym1 (Sym2 a b c)").unwrap().0));
+    assert!(copat_parses(
+        copat().easy_parse("Sym1 (Sym2 a b c)").unwrap().0
+    ));
 }
 
 // impl Arbitrary for ExprHead {
@@ -366,7 +385,6 @@ fn copat_parses_some() {
 //         }
 //     }
 // }
-
 
 // impl Arbitrary for ExprOp {
 //     fn arbitrary(g: &mut Gen) -> Self {
@@ -402,9 +420,8 @@ fn copat_parses_some() {
 //     }
 // }
 
-
 // fn expr_parses(expression: Expr) -> bool {
-//     let printed = expression.to_string(); 
+//     let printed = expression.to_string();
 //     let parsed = expr().easy_parse(printed.as_str());
 
 //     match parsed {
@@ -412,7 +429,7 @@ fn copat_parses_some() {
 //         println!("
 //         {printed}
 //         {expression:?}
-//             parses as 
+//             parses as
 //         {}
 //         {v:?}", v.to_string()
 //         );
@@ -432,7 +449,6 @@ fn copat_parses_some() {
 //     assert!(expr_parses(expr().easy_parse("3").unwrap().0));
 //     assert!(expr_parses(expr().easy_parse("Sym1 (Sym2 a b c)").unwrap().0));
 // }
-
 
 // impl Arbitrary for Decl {
 //     fn arbitrary(g: &mut Gen) -> Self {
@@ -460,9 +476,8 @@ fn copat_parses_some() {
 //     }
 // }
 
-
 // fn decl_parses(declaration: Decl) -> bool {
-//     let printed = declaration.to_string(); 
+//     let printed = declaration.to_string();
 //     let parsed = decl().easy_parse(printed.as_str());
 
 //     match parsed {
@@ -470,7 +485,7 @@ fn copat_parses_some() {
 //         println!("
 //         {printed}
 //         {declaration:?}
-//             parses as 
+//             parses as
 //         {}
 //         {v:?}", v.to_string()
 //         );
@@ -492,7 +507,6 @@ fn copat_parses_some() {
 //     assert!(decl_parses(decl().easy_parse("a <- b").unwrap().0));
 // }
 
-
 // impl Arbitrary for Modul {
 //     fn arbitrary(g: &mut Gen) -> Self {
 //         let mut decls = vec![Decl::arbitrary(g)];
@@ -507,9 +521,8 @@ fn copat_parses_some() {
 //     }
 // }
 
-
 // fn modul_parses(module: Modul) -> bool {
-//     let printed = module.to_string(); 
+//     let printed = module.to_string();
 //     let parsed = modul().easy_parse(printed.as_str());
 
 //     match parsed {
@@ -517,7 +530,7 @@ fn copat_parses_some() {
 //         println!("
 //         {printed}
 //         {module:?}
-//             parses as 
+//             parses as
 //         {}
 //         {v:?}", v.to_string()
 //         );

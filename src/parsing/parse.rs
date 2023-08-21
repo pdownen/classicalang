@@ -1,5 +1,6 @@
 use crate::syntax::sequential::{
-    Copat, CopatOp, Decl, Decons, DeconsOp, Expr, ExprHead, ExprOp, ExprTail, Lit, Modul, Name, Pat,
+    AtomicPat, Copat, CopatOp, Decl, Decons, DeconsOp, Expr, ExprHead, ExprOp, ExprTail, Lit,
+    Modul, Name, Pat,
 };
 
 extern crate combine;
@@ -141,14 +142,14 @@ where
         })
 }
 
-pub fn atomic_pat<I>() -> impl Parser<I, Output = Pat>
+pub fn atomic_pat<I>() -> impl Parser<I, Output = AtomicPat>
 where
     I: Stream<Token = char>,
 {
     wildcard_pat()
-        .map(|_| Pat::blank())
-        .or(lit().map(Lit::mtch).map(Decons::decons))
-        .or(variable().map(Pat::Var))
+        .map(|_| AtomicPat::blank())
+        .or(lit().map(Lit::switch))
+        .or(variable().map(AtomicPat::Var))
         .skip(spaces())
 }
 
@@ -157,7 +158,7 @@ where
     I: Stream<Token = char>,
 {
     lit()
-        .and(spaces().with(many(decons_op())))
+        .and(spaces().with(many1(decons_op())))
         .map(|(c, ops): (Lit, Vec<DeconsOp>)| c.mtch().extend(ops))
 }
 
@@ -168,7 +169,7 @@ where
     let pat_: fn(&mut I) -> StdParseResult<Pat, I> = |input| pat().parse_stream(input).into();
 
     between(char('(').skip(spaces()), char(')').skip(spaces()), pat_)
-        .or(atomic_pat())
+        .or(atomic_pat().map(Pat::Atom))
         .map(DeconsOp::App)
 }
 
@@ -176,9 +177,7 @@ pub fn pat<I>() -> impl Parser<I, Output = Pat>
 where
     I: Stream<Token = char>,
 {
-    (wildcard_pat().map(|_| Pat::blank()))
-        .or(decons().map(Pat::Struc))
-        .or(variable().map(Pat::Var))
+    attempt(atomic_pat().map(Pat::Atom)).or(decons().map(Pat::Struc))
 }
 
 pub fn copat_op<I>() -> impl Parser<I, Output = CopatOp>
@@ -199,9 +198,9 @@ pub fn copat<I>() -> impl Parser<I, Output = Copat>
 where
     I: Stream<Token = char>,
 {
-    pat()
+    atomic_pat()
         .and(many(copat_op()))
-        .map(|(pat, tail)| pat.this().extend(tail))
+        .map(|(apat, tail)| apat.this().extend(tail))
 }
 
 pub fn expr_head<I>() -> impl Parser<I, Output = ExprHead>
