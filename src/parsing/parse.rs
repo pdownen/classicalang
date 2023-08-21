@@ -180,9 +180,10 @@ pub fn copat_op<I>() -> impl Parser<I, Output = CopatOp>
 where
     I: Stream<Token = char>,
 {
+    let parenthesized = |p| between(char('(').skip(spaces()), char(')').skip(spaces()), p);
     let copat_: fn(&mut I) -> StdParseResult<Pat, I> = |input| pat().parse_stream(input).into();
 
-    between(char('(').skip(spaces()), char(')'), copat_)
+    parenthesized(copat_)
         .map(|p| CopatOp::App(p))
         .or(char('.').with(lit().map(CopatOp::Dot)))
         .skip(spaces())

@@ -3,11 +3,12 @@ extern crate quickcheck;
 use std::io::LineWriter;
 
 use combine::{EasyParser, Parser};
+use num::Integer;
 use quickcheck_macros::quickcheck;
 
 use crate::{
     parsing::parse::*,
-    syntax::{sequential::{Lit, Name, Pat, DeconsOp, Decons }}
+    syntax::{sequential::{Lit, Name, Pat, DeconsOp, Decons, CopatOp, Copat }}
 };
 use quickcheck::{Arbitrary, Gen, TestResult, empty_shrinker};
 
@@ -211,6 +212,12 @@ impl Arbitrary for DeconsOp {
     fn arbitrary(g: &mut Gen) -> DeconsOp {
         DeconsOp::App(Pat::arbitrary(g))
     }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        match self {
+            DeconsOp::App(pat) => Box::new(pat.shrink().map(DeconsOp::App)),
+        }
+    }
 }
 
 impl Arbitrary for Pat {
@@ -243,16 +250,7 @@ fn pat_parses(pattern: Pat) -> bool {
     let parsed = pat().easy_parse(printed.as_str());
 
     match parsed {
-        Ok((v, _s)) => {
-        println!("
-        {printed}
-        {pattern:?}
-            parses as 
-        {}
-        {v:?}", v.to_string()
-        );
-            v == pattern
-        },
+        Ok((v, _s)) => v == pattern,
         Err(_) => false,
     }
 }
@@ -280,3 +278,66 @@ fn pat_parses_some() {
     assert!(pat_parses(pat().easy_parse("Sym1 (Sym2 a b c)").unwrap().0));
 }
 
+impl Arbitrary for CopatOp {
+    fn arbitrary(g: &mut Gen) -> Self {
+        match u32::arbitrary(g) % 2 {
+            0 => CopatOp::App(Pat::arbitrary(g)),
+            _ => CopatOp::Dot(Lit::arbitrary(g))
+        }
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        match self {
+            CopatOp::App(pat) => Box::new(pat.shrink().map(CopatOp::App)),
+            CopatOp::Dot(lit) => Box::new(lit.shrink().map(CopatOp::Dot)),
+        }
+    }
+}
+
+impl Arbitrary for Copat {
+    fn arbitrary(g: &mut Gen) -> Self {
+        let mut copat = Pat::arbitrary(g).this();
+        while u32::arbitrary(g) % 2 != 0 {
+            copat = copat.push(CopatOp::arbitrary(g));
+        }
+        copat
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        Box::new(
+            (self.head.clone(), self.tail.clone())
+                .shrink()
+                .map(|(h, t)| h.this().extend(t))
+        )
+    }
+}
+
+
+fn copat_parses(copattern: Copat) -> bool {
+    let printed = copattern.to_string(); 
+    let parsed = copat().easy_parse(printed.as_str());
+
+    match parsed {
+        Ok((v, _s)) => {
+        println!("
+        {printed}
+        {copattern:?}
+            parses as 
+        {}
+        {v:?}", v.to_string()
+        );
+            v == copattern
+        },
+        Err(_) => false,
+    }
+}
+
+#[quickcheck]
+fn copat_parses_all(copat: Copat) -> bool {
+    copat_parses(copat)
+}
+
+#[test]
+fn copat_parses_some() {
+    assert!(copat_parses(copat().easy_parse("Sym1 (Sym2 a b c)").unwrap().0));
+}

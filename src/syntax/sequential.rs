@@ -307,7 +307,7 @@ impl fmt::Display for Lit {
 // CopatOp ::= (Pat) | .Lit
 
 // Copat ::= Pat CopatOp*
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum CopatOp {
     App(Pat),
     Dot(Lit),
@@ -315,10 +315,10 @@ pub enum CopatOp {
 
 type CopatTail = Vec<CopatOp>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Copat {
-    head: Pat,
-    tail: CopatTail,
+    pub head: Pat,
+    pub tail: CopatTail,
 }
 
 impl Copat {
