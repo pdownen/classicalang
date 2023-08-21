@@ -25,6 +25,17 @@ impl Name {
     pub fn bind(self) -> Pat {
         Pat::Var(self)
     }
+
+    pub fn to_doc(&self) -> RcDoc<()> {
+        let doc = RcDoc::text(&self.id);
+        doc
+    }
+
+    pub fn to_pretty(&self, width: usize) -> String {
+        let mut w = Vec::new();
+        self.to_doc().render(width, &mut w).unwrap();
+        String::from_utf8(w).unwrap()
+    }
 }
 
 impl fmt::Display for Name {
@@ -63,6 +74,24 @@ impl Modul {
         self.defns.extend(more.defns);
         self
     }
+
+    pub fn to_doc(&self) -> RcDoc<()> {
+        let doc = RcDoc::intersperse(
+            self.defns
+                .iter()
+                .map(|d| RcDoc::text(format!("{:?};", d.to_doc())))
+                .collect::<Vec<RcDoc<'_>>>(),
+            RcDoc::hardline(),
+        )
+            .append(RcDoc::nil());
+        doc
+    }
+
+    pub fn to_pretty(&self, width: usize) -> String {
+        let mut w = Vec::new();
+        self.to_doc().render(width, &mut w).unwrap();
+        String::from_utf8(w).unwrap()
+    }
 }
 
 impl fmt::Display for Modul {
@@ -74,7 +103,7 @@ impl fmt::Display for Modul {
                 .collect::<Vec<RcDoc<'_>>>(),
             RcDoc::hardline(),
         )
-        .append(RcDoc::nil());
+            .append(RcDoc::nil());
         write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
     }
 }
@@ -87,6 +116,33 @@ pub enum Decl {
     Include(Expr),
     Method(Copat, Expr),
     Bind(Pat, Expr),
+}
+
+impl Decl {
+    pub fn to_doc(&self) -> RcDoc<'_> {
+        match self {
+            Decl::Include(e) => {
+                RcDoc::text("include")
+                    .append(e.to_doc())
+            }
+            Decl::Method(q, e) => {
+                RcDoc::text(q.to_string())
+                    .append(RcDoc::text(" -> "))
+                    .append(RcDoc::text(e.to_doc()))
+            }
+            Decl::Bind(p, e) => {
+                RcDoc::text(p.to_string())
+                    .append(RcDoc::text(" <- "))
+                    .append(RcDoc::text(e.to_string()))
+            }
+        }
+    }
+
+    pub fn to_pretty(&self, width: usize) -> String {
+        let mut w = Vec::new();
+        self.to_doc().render(width, &mut w).unwrap();
+        String::from_utf8(w).unwrap()
+    }
 }
 
 impl fmt::Display for Decl {
@@ -175,6 +231,65 @@ impl Expr {
     pub fn included(self) -> Decl {
         Decl::Include(self)
     }
+
+    pub fn to_doc(&self) -> RcDoc<()> {
+        let head_str = self.head.to_pretty(MAX_LINE_WIDTH).to_string();
+        let head_doc: RcDoc<'_> = RcDoc::text(head_str);
+        let op_docs: Vec<RcDoc<'_>> = self
+            .tail
+            .iter()
+            .map(|op| {
+                let op_str = op.to_string();
+                RcDoc::text(op_str)
+            })
+            .collect();
+        let doc = RcDoc::concat(vec![head_doc].into_iter().chain(op_docs));
+        doc
+    }
+
+    pub fn to_pretty(&self, width: usize) -> String {
+        let mut w = Vec::new();
+        self.to_doc().render(width, &mut w).unwrap();
+        String::from_utf8(w).unwrap()
+    }
+}
+
+impl ExprHead {
+    pub fn to_doc(&self) -> RcDoc<()> {
+        let doc = match self {
+            ExprHead::Var(x) => RcDoc::<()>::text(x.to_string()),
+            ExprHead::Const(c) => RcDoc::<()>::text(c.to_string()),
+            ExprHead::Lambda(l) => {
+                let indented_l = l.defns.iter()
+                    .map(|d| RcDoc::<()>::text(format!("{};", d)))
+                    .map(|doc| doc)
+                    .collect::<Vec<_>>();
+
+                let mut formatted_indented_l = RcDoc::<()>::nil();
+                for (index, line) in indented_l.iter().enumerate() {
+                    if index > 0 {
+                        formatted_indented_l = formatted_indented_l.append(RcDoc::<()>::hardline());
+                    }
+                    formatted_indented_l = formatted_indented_l.append(line.clone());
+                }
+
+                RcDoc::<()>::text("{")
+                    .append(RcDoc::<()>::line_()
+                        .append(formatted_indented_l)
+                        .nest(INDENTATION_WIDTH)
+                        .group())
+                    .append(RcDoc::<()>::line())
+                    .append(RcDoc::<()>::text("}"))
+            }
+        };
+        doc
+    }
+
+    pub fn to_pretty(&self, width: usize) -> String {
+        let mut w = Vec::new();
+        self.to_doc().render(width, &mut w).unwrap();
+        String::from_utf8(w).unwrap()
+    }
 }
 
 impl fmt::Display for ExprHead {
@@ -195,11 +310,11 @@ impl fmt::Display for ExprHead {
                     }
                     formatted_indented_l = formatted_indented_l.append(line.clone());
                 }
-                
+
                 RcDoc::<()>::text("{")
                     .append(RcDoc::<()>::line_()
                         .append(formatted_indented_l)
-			.nest(INDENTATION_WIDTH)
+                        .nest(INDENTATION_WIDTH)
                         .group())
                     .append(RcDoc::<()>::line())
                     .append(RcDoc::<()>::text("}"))
@@ -290,6 +405,22 @@ impl Lit {
             tail: Vec::new(),
         }
     }
+
+    pub fn to_doc(&self) -> RcDoc<()> {
+        let doc = match self {
+            Lit::Int(i) => RcDoc::<()>::text(i.to_string()),
+            Lit::Flt(n) => RcDoc::<()>::text(format!("{:?}", n)),
+            Lit::Str(s) => RcDoc::<()>::text(format!("{:?}", s)),
+            Lit::Sym(s) => RcDoc::<()>::text(s.to_string()),
+        };
+        doc
+    }
+
+    pub fn to_pretty(&self, width: usize) -> String {
+        let mut w = Vec::new();
+        self.to_doc().render(width, &mut w).unwrap();
+        String::from_utf8(w).unwrap()
+    }
 }
 
 impl fmt::Display for Lit {
@@ -346,6 +477,21 @@ impl Copat {
 
     pub fn dot(self, field: Lit) -> Copat {
         self.push(CopatOp::Dot(field))
+    }
+
+    pub fn to_doc(&self) -> RcDoc<()> {
+        let mut doc: RcDoc<'_, ()> = RcDoc::nil();
+        doc = doc.append(RcDoc::text(self.head.to_string()));
+        for op in &self.tail {
+            doc = doc.append(RcDoc::text(op.to_string()));
+        }
+        doc
+    }
+
+    pub fn to_pretty(&self, width: usize) -> String {
+        let mut w = Vec::new();
+        self.to_doc().render(width, &mut w).unwrap();
+        String::from_utf8(w).unwrap()
     }
 }
 
@@ -415,6 +561,21 @@ impl Decons {
     pub fn app(self, arg: Pat) -> Decons {
         self.push(DeconsOp::App(arg))
     }
+
+    pub fn to_doc(&self) -> RcDoc<()> {
+        let mut doc: RcDoc<'_, ()> = RcDoc::nil();
+        doc = doc.append(RcDoc::text(self.head.to_string()));
+        for op in &self.tail {
+            doc = doc.append(RcDoc::text(op.to_string()));
+        }
+        doc
+    }
+
+    pub fn to_pretty(&self, width: usize) -> String {
+        let mut w = Vec::new();
+        self.to_doc().render(width, &mut w).unwrap();
+        String::from_utf8(w).unwrap()
+    }
 }
 
 impl Pat {
@@ -434,6 +595,21 @@ impl Pat {
             head: self,
             tail: Vec::new(),
         }
+    }
+
+    pub fn to_doc(&self) -> RcDoc<()> {
+        let doc = match self {
+            Pat::Unused => RcDoc::<()>::text("_"),
+            Pat::Var(x) => RcDoc::<()>::text(x.to_string()),
+            Pat::Struc(s) => RcDoc::<()>::text(s.to_string()),
+        };
+        doc
+    }
+
+    pub fn to_pretty(&self, width: usize) -> String {
+        let mut w = Vec::new();
+        self.to_doc().render(width, &mut w).unwrap();
+        String::from_utf8(w).unwrap()
     }
 }
 
