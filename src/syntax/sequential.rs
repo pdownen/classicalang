@@ -44,7 +44,7 @@ impl fmt::Debug for Name {
 }
 
 // Modul ::= Decl_1 ; Decl_2 ; ... Decl_n ;
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Modul {
     pub defns: Vec<Decl>,
 }
@@ -82,7 +82,7 @@ impl fmt::Display for Modul {
 // Decl ::= include Expr
 //        | Copat -> Expr
 //        | Pat <- Expr
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Decl {
     Include(Expr),
     Method(Copat, Expr),
@@ -119,14 +119,14 @@ impl fmt::Display for Decl {
 // ExprTail ::= ExprOp*
 
 // Expr ::= ExprHead ExprTail
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ExprHead {
     Var(Name),
     Const(Lit),
     Lambda(Modul),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ExprOp {
     App(Expr),
     Dot(Lit),
@@ -134,10 +134,10 @@ pub enum ExprOp {
 
 pub type ExprTail = Vec<ExprOp>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Expr {
-    head: ExprHead,
-    tail: ExprTail,
+    pub head: ExprHead,
+    pub tail: ExprTail,
 }
 
 impl ExprHead {
