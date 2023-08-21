@@ -270,7 +270,7 @@ fn main() {
             let line = line.unwrap();
             let line = line.as_str();
             match whole_input(modul()).easy_parse(line).map(|(v, _s)| v) {
-                Ok(v) => println!("{v:?}\n{v}"),
+                Ok(v) => println!("{v:?}\n{}", v.to_pretty(80)),
                 Err(e) => println!("{e}"),
             };
         }

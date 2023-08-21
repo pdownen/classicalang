@@ -5,13 +5,13 @@ use crate::syntax::sequential::{
 extern crate combine;
 
 use combine::{
-    attempt, between, eof, many, many1, none_of,
+    attempt, between, eof, many, many1, none_of, one_of, optional,
     parser::char::upper,
     parser::{
         self,
-        char::{char, digit, lower, spaces, string}
+        char::{char, digit, lower, spaces, string},
     },
-    satisfy, value, Parser, StdParseResult, Stream, optional, one_of, EasyParser,
+    satisfy, value, EasyParser, Parser, StdParseResult, Stream,
 };
 
 pub fn natural<I>() -> impl Parser<I, Output = String>
@@ -32,9 +32,9 @@ pub fn integer<I>() -> impl Parser<I, Output = i64>
 where
     I: Stream<Token = char>,
 {
-    sign().and(natural()).map(|(s, n)| 
-        format!("{s}{n}").parse::<i64>().unwrap()
-    )
+    sign()
+        .and(natural())
+        .map(|(s, n)| format!("{s}{n}").parse::<i64>().unwrap())
 }
 
 pub fn float_specials<I>() -> impl Parser<I, Output = String>
@@ -47,7 +47,7 @@ where
         .or(attempt(string("nan")))
         .or(attempt(string("NAN")))
         .or(string("NaN")))
-        .map(|s| s.to_string())
+    .map(|s| s.to_string())
 }
 
 pub fn float_digits<I>() -> impl Parser<I, Output = String>
@@ -58,22 +58,22 @@ where
         .skip(char('.'))
         .and(many1(digit()))
         .and(optional((char('e').or(char('E'))).and(natural())))
-        .map(|((s1, s2,), exp): ((String, String), Option<(char, String)>)| 
-            match exp {
+        .map(
+            |((s1, s2), exp): ((String, String), Option<(char, String)>)| match exp {
                 None => format!("{s1}.{s2}"),
-                Some((e, expn)) => format!("{s1}.{s2}{e}{expn}")
-            }
+                Some((e, expn)) => format!("{s1}.{s2}{e}{expn}"),
+            },
         )
-    .or(float_specials())
+        .or(float_specials())
 }
 
 pub fn float<I>() -> impl Parser<I, Output = f64>
 where
     I: Stream<Token = char>,
 {
-    sign().and(float_digits()).map(|(s, f)| 
-        format!("{s}{f}").parse::<f64>().unwrap()
-    )
+    sign()
+        .and(float_digits())
+        .map(|(s, f)| format!("{s}{f}").parse::<f64>().unwrap())
 }
 
 pub fn string_quoted<I>() -> impl Parser<I, Output = String>
@@ -81,10 +81,12 @@ where
     I: Stream<Token = char>,
 {
     let string_char = none_of("\"\\".chars());
-    let escape_sequence = char('\\').with(char('"')
-        .or(char('\\'))
-        .or(char('n').map(|_| '\n'))
-        .or(char('0').map(|_| '\0')));
+    let escape_sequence = char('\\').with(
+        char('"')
+            .or(char('\\'))
+            .or(char('n').map(|_| '\n'))
+            .or(char('0').map(|_| '\0')),
+    );
     // look for other escape sequences
 
     char('"')
@@ -139,12 +141,12 @@ where
         })
 }
 
-
 pub fn atomic_pat<I>() -> impl Parser<I, Output = Pat>
 where
     I: Stream<Token = char>,
 {
-    wildcard_pat().map(|_| Pat::blank())
+    wildcard_pat()
+        .map(|_| Pat::blank())
         .or(lit().map(Lit::mtch).map(Decons::decons))
         .or(variable().map(Pat::Var))
         .skip(spaces())
@@ -153,11 +155,10 @@ where
 pub fn decons<I>() -> impl Parser<I, Output = Decons>
 where
     I: Stream<Token = char>,
-{   
-    lit().and(spaces().with(many(decons_op())))
-    .map(|(c, ops): (Lit, Vec<DeconsOp>)| {
-        c.mtch().extend(ops)
-    })
+{
+    lit()
+        .and(spaces().with(many(decons_op())))
+        .map(|(c, ops): (Lit, Vec<DeconsOp>)| c.mtch().extend(ops))
 }
 
 pub fn decons_op<I>() -> impl Parser<I, Output = DeconsOp>
@@ -166,12 +167,9 @@ where
 {
     let pat_: fn(&mut I) -> StdParseResult<Pat, I> = |input| pat().parse_stream(input).into();
 
-    between(
-        char('(').skip(spaces()), 
-        char(')').skip(spaces()), 
-        pat_
-    )
-        .or(atomic_pat()).map(DeconsOp::App)
+    between(char('(').skip(spaces()), char(')').skip(spaces()), pat_)
+        .or(atomic_pat())
+        .map(DeconsOp::App)
 }
 
 pub fn pat<I>() -> impl Parser<I, Output = Pat>
@@ -190,8 +188,9 @@ where
     let parenthesized = |p| between(char('(').skip(spaces()), char(')').skip(spaces()), p);
     let pat_: fn(&mut I) -> StdParseResult<Pat, I> = |input| pat().parse_stream(input).into();
 
-    parenthesized(pat_).map(|p| CopatOp::App(p))
-        .or(atomic_pat().map(CopatOp::App))
+    parenthesized(pat_)
+        .map(|p| CopatOp::App(p))
+        // .or(atomic_pat().map(CopatOp::App))
         .or(char('.').with(lit().map(CopatOp::Dot)))
         .skip(spaces())
 }

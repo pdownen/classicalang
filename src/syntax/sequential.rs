@@ -81,7 +81,7 @@ impl Modul {
                 .iter()
                 .map(|d| d.to_doc())
                 .collect::<Vec<RcDoc<'_>>>(),
-            RcDoc::hardline(),
+            RcDoc::softline(),
         )
             .append(RcDoc::nil());
         doc
