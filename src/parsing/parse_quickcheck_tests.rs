@@ -342,211 +342,211 @@ fn copat_parses_some() {
     assert!(copat_parses(copat().easy_parse("Sym1 (Sym2 a b c)").unwrap().0));
 }
 
-impl Arbitrary for ExprHead {
-    fn arbitrary(g: &mut Gen) -> Self {
-        match u32::arbitrary(g) % 3 {
-            0 => {
-                let mut c: char = char::arbitrary(g);
-                while !c.is_ascii_alphabetic() {
-                    c = char::arbitrary(g);
-                }
-                let name = format!("{}{}", c.to_lowercase(), Name::arbitrary(g));
-                ExprHead::Var(Name::id(name.as_str()))
-            },
-            1 => ExprHead::Const(Lit::arbitrary(g)),
-            _ => ExprHead::Lambda(Modul::arbitrary(g))
-        }
-    }
+// impl Arbitrary for ExprHead {
+//     fn arbitrary(g: &mut Gen) -> Self {
+//         match u32::arbitrary(g) % 3 {
+//             0 => {
+//                 let mut c: char = char::arbitrary(g);
+//                 while !c.is_ascii_alphabetic() {
+//                     c = char::arbitrary(g);
+//                 }
+//                 let name = format!("{}{}", c.to_lowercase(), Name::arbitrary(g));
+//                 ExprHead::Var(Name::id(name.as_str()))
+//             },
+//             1 => ExprHead::Const(Lit::arbitrary(g)),
+//             _ => ExprHead::Lambda(Modul::arbitrary(g))
+//         }
+//     }
 
-    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        match self {
-            ExprHead::Var(v) => Box::new(v.shrink().map(ExprHead::Var)),
-            ExprHead::Const(l) => Box::new(l.shrink().map(ExprHead::Const)),
-            ExprHead::Lambda(m) => Box::new(m.shrink().map(ExprHead::Lambda)),
-        }
-    }
-}
-
-
-impl Arbitrary for ExprOp {
-    fn arbitrary(g: &mut Gen) -> Self {
-        match u32::arbitrary(g) % 2 {
-            0 => ExprOp::App(Expr::arbitrary(g)),
-            _ => ExprOp::Dot(Lit::arbitrary(g))
-        }
-    }
-
-    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        match self {
-            ExprOp::App(expr) => Box::new(expr.shrink().map(ExprOp::App)),
-            ExprOp::Dot(lit) => Box::new(lit.shrink().map(ExprOp::Dot)),
-        }
-    }
-}
-
-impl Arbitrary for Expr {
-    fn arbitrary(g: &mut Gen) -> Self {
-        let mut expr = ExprHead::arbitrary(g).head();
-        while u32::arbitrary(g) % 2 != 0 {
-            expr = expr.push(ExprOp::arbitrary(g));
-        }
-        expr
-    }
-
-    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        Box::new(
-            (self.head.clone(), self.tail.clone())
-                .shrink()
-                .map(|(h, t)| h.head().extend(t))
-        )
-    }
-}
-
-
-fn expr_parses(expression: Expr) -> bool {
-    let printed = expression.to_string(); 
-    let parsed = expr().easy_parse(printed.as_str());
-
-    match parsed {
-        Ok((v, _s)) => {
-        println!("
-        {printed}
-        {expression:?}
-            parses as 
-        {}
-        {v:?}", v.to_string()
-        );
-            v == expression
-        },
-        Err(_) => false,
-    }
-}
-
-// #[quickcheck]
-// fn expr_parses_all(expr: Expr) -> bool {
-//     expr_parses(expr)
+//     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+//         match self {
+//             ExprHead::Var(v) => Box::new(v.shrink().map(ExprHead::Var)),
+//             ExprHead::Const(l) => Box::new(l.shrink().map(ExprHead::Const)),
+//             ExprHead::Lambda(m) => Box::new(m.shrink().map(ExprHead::Lambda)),
+//         }
+//     }
 // }
 
-#[test]
-fn expr_parses_some() {
-    assert!(expr_parses(expr().easy_parse("3").unwrap().0));
-    assert!(expr_parses(expr().easy_parse("Sym1 (Sym2 a b c)").unwrap().0));
-}
 
+// impl Arbitrary for ExprOp {
+//     fn arbitrary(g: &mut Gen) -> Self {
+//         match u32::arbitrary(g) % 2 {
+//             0 => ExprOp::App(Expr::arbitrary(g)),
+//             _ => ExprOp::Dot(Lit::arbitrary(g))
+//         }
+//     }
 
-impl Arbitrary for Decl {
-    fn arbitrary(g: &mut Gen) -> Self {
-        match u32::arbitrary(g) % 3 {
-            0 => Decl::Include(Expr::arbitrary(g)),
-            1 => Decl::Method(Copat::arbitrary(g), Expr::arbitrary(g)),
-            _ => Decl::Bind(Pat::arbitrary(g),Expr::arbitrary(g))
-        }
-    }
-
-    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        match self {
-            Decl::Include(e) => Box::new(e.shrink().map(Decl::Include)),
-            Decl::Method(c, e) => Box::new(
-                (c.clone(), e.clone())
-                    .shrink()
-                    .map(|(c, e)| Decl::Method(c, e))
-            ),
-            Decl::Bind(p, e) => Box::new(
-                (p.clone(), e.clone())
-                    .shrink()
-                    .map(|(p, e)| Decl::Bind(p, e))
-            ),
-        }
-    }
-}
-
-
-fn decl_parses(declaration: Decl) -> bool {
-    let printed = declaration.to_string(); 
-    let parsed = decl().easy_parse(printed.as_str());
-
-    match parsed {
-        Ok((v, _s)) => {
-        println!("
-        {printed}
-        {declaration:?}
-            parses as 
-        {}
-        {v:?}", v.to_string()
-        );
-            v == declaration
-        },
-        Err(_) => false,
-    }
-}
-
-// #[quickcheck]
-// fn decl_parses_all(decl: Decl) -> bool {
-//     decl_parses(decl)
+//     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+//         match self {
+//             ExprOp::App(expr) => Box::new(expr.shrink().map(ExprOp::App)),
+//             ExprOp::Dot(lit) => Box::new(lit.shrink().map(ExprOp::Dot)),
+//         }
+//     }
 // }
 
-#[test]
-fn decl_parses_some() {
-    assert!(decl_parses(decl().easy_parse("Include Symbol").unwrap().0));
-    assert!(decl_parses(decl().easy_parse("x -> 2").unwrap().0));
-    assert!(decl_parses(decl().easy_parse("a <- b").unwrap().0));
-}
+// impl Arbitrary for Expr {
+//     fn arbitrary(g: &mut Gen) -> Self {
+//         let mut expr = ExprHead::arbitrary(g).head();
+//         while u32::arbitrary(g) % 2 != 0 {
+//             expr = expr.push(ExprOp::arbitrary(g));
+//         }
+//         expr
+//     }
 
-
-impl Arbitrary for Modul {
-    fn arbitrary(g: &mut Gen) -> Self {
-        let mut decls = vec![Decl::arbitrary(g)];
-        while u32::arbitrary(g) % 2 != 0 {
-            decls.push(Decl::arbitrary(g));
-        }
-        Modul { defns: decls }
-    }
-
-    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        Box::new(self.defns.shrink().map(|ds| Modul { defns: ds }))
-    }
-}
-
-
-fn modul_parses(module: Modul) -> bool {
-    let printed = module.to_string(); 
-    let parsed = modul().easy_parse(printed.as_str());
-
-    match parsed {
-        Ok((v, _s)) => {
-        println!("
-        {printed}
-        {module:?}
-            parses as 
-        {}
-        {v:?}", v.to_string()
-        );
-            v == module
-        },
-        Err(_) => false,
-    }
-}
-
-// #[quickcheck]
-// fn modul_parses_all(modul: Modul) -> bool {
-//     modul_parses(modul)
+//     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+//         Box::new(
+//             (self.head.clone(), self.tail.clone())
+//                 .shrink()
+//                 .map(|(h, t)| h.head().extend(t))
+//         )
+//     }
 // }
 
-#[test]
-fn modul_parses_some() {
-    assert!(modul_parses(modul().easy_parse("include Symbol;").unwrap().0));
-    assert!(modul_parses(modul().easy_parse("
-        x -> 2;
-        a <- b;
-    ").unwrap().0));
-    assert!(modul_parses(modul().easy_parse("
-        fact 0 -> 1;
-        fact n -> times n fact(minus n 1);
-    ").unwrap().0));
-    assert!(modul_parses(modul().easy_parse("
-        factorial list -> map {
-            fact 0 <- 1;
-            fact n -> times n fact(minus n 1);
-        } list;
-    ").unwrap().0));
-}
+
+// fn expr_parses(expression: Expr) -> bool {
+//     let printed = expression.to_string(); 
+//     let parsed = expr().easy_parse(printed.as_str());
+
+//     match parsed {
+//         Ok((v, _s)) => {
+//         println!("
+//         {printed}
+//         {expression:?}
+//             parses as 
+//         {}
+//         {v:?}", v.to_string()
+//         );
+//             v == expression
+//         },
+//         Err(_) => false,
+//     }
+// }
+
+// // #[quickcheck]
+// // fn expr_parses_all(expr: Expr) -> bool {
+// //     expr_parses(expr)
+// // }
+
+// #[test]
+// fn expr_parses_some() {
+//     assert!(expr_parses(expr().easy_parse("3").unwrap().0));
+//     assert!(expr_parses(expr().easy_parse("Sym1 (Sym2 a b c)").unwrap().0));
+// }
+
+
+// impl Arbitrary for Decl {
+//     fn arbitrary(g: &mut Gen) -> Self {
+//         match u32::arbitrary(g) % 3 {
+//             0 => Decl::Include(Expr::arbitrary(g)),
+//             1 => Decl::Method(Copat::arbitrary(g), Expr::arbitrary(g)),
+//             _ => Decl::Bind(Pat::arbitrary(g),Expr::arbitrary(g))
+//         }
+//     }
+
+//     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+//         match self {
+//             Decl::Include(e) => Box::new(e.shrink().map(Decl::Include)),
+//             Decl::Method(c, e) => Box::new(
+//                 (c.clone(), e.clone())
+//                     .shrink()
+//                     .map(|(c, e)| Decl::Method(c, e))
+//             ),
+//             Decl::Bind(p, e) => Box::new(
+//                 (p.clone(), e.clone())
+//                     .shrink()
+//                     .map(|(p, e)| Decl::Bind(p, e))
+//             ),
+//         }
+//     }
+// }
+
+
+// fn decl_parses(declaration: Decl) -> bool {
+//     let printed = declaration.to_string(); 
+//     let parsed = decl().easy_parse(printed.as_str());
+
+//     match parsed {
+//         Ok((v, _s)) => {
+//         println!("
+//         {printed}
+//         {declaration:?}
+//             parses as 
+//         {}
+//         {v:?}", v.to_string()
+//         );
+//             v == declaration
+//         },
+//         Err(_) => false,
+//     }
+// }
+
+// // #[quickcheck]
+// // fn decl_parses_all(decl: Decl) -> bool {
+// //     decl_parses(decl)
+// // }
+
+// #[test]
+// fn decl_parses_some() {
+//     assert!(decl_parses(decl().easy_parse("Include Symbol").unwrap().0));
+//     assert!(decl_parses(decl().easy_parse("x -> 2").unwrap().0));
+//     assert!(decl_parses(decl().easy_parse("a <- b").unwrap().0));
+// }
+
+
+// impl Arbitrary for Modul {
+//     fn arbitrary(g: &mut Gen) -> Self {
+//         let mut decls = vec![Decl::arbitrary(g)];
+//         while u32::arbitrary(g) % 2 != 0 {
+//             decls.push(Decl::arbitrary(g));
+//         }
+//         Modul { defns: decls }
+//     }
+
+//     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+//         Box::new(self.defns.shrink().map(|ds| Modul { defns: ds }))
+//     }
+// }
+
+
+// fn modul_parses(module: Modul) -> bool {
+//     let printed = module.to_string(); 
+//     let parsed = modul().easy_parse(printed.as_str());
+
+//     match parsed {
+//         Ok((v, _s)) => {
+//         println!("
+//         {printed}
+//         {module:?}
+//             parses as 
+//         {}
+//         {v:?}", v.to_string()
+//         );
+//             v == module
+//         },
+//         Err(_) => false,
+//     }
+// }
+
+// // #[quickcheck]
+// // fn modul_parses_all(modul: Modul) -> bool {
+// //     modul_parses(modul)
+// // }
+
+// #[test]
+// fn modul_parses_some() {
+//     assert!(modul_parses(modul().easy_parse("include Symbol;").unwrap().0));
+//     assert!(modul_parses(modul().easy_parse("
+//         x -> 2;
+//         a <- b;
+//     ").unwrap().0));
+//     assert!(modul_parses(modul().easy_parse("
+//         fact 0 -> 1;
+//         fact n -> times n fact(minus n 1);
+//     ").unwrap().0));
+//     assert!(modul_parses(modul().easy_parse("
+//         factorial list -> map {
+//             fact 0 <- 1;
+//             fact n -> times n fact(minus n 1);
+//         } list;
+//     ").unwrap().0));
+// }

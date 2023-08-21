@@ -114,6 +114,7 @@ where
         .or(integer().map(Lit::Int))
         .or(string_quoted().map(Lit::Str))
         .or(symbol().map(Lit::Sym))
+        .skip(spaces())
 }
 
 pub fn wildcard_pat<I>() -> impl Parser<I, Output = char>
@@ -138,21 +139,22 @@ where
         })
 }
 
+
+pub fn atomic_pat<I>() -> impl Parser<I, Output = Pat>
+where
+    I: Stream<Token = char>,
+{
+    wildcard_pat().map(|_| Pat::blank())
+        .or(lit().map(Lit::mtch).map(Decons::decons))
+        .or(variable().map(Pat::Var))
+        .skip(spaces())
+}
+
 pub fn decons<I>() -> impl Parser<I, Output = Decons>
 where
     I: Stream<Token = char>,
 {   
-    let pat_: fn(&mut I) -> StdParseResult<Pat, I> = |input| pat().parse_stream(input).into();
-    
-    let parenthesized = |p| between(char('(').skip(spaces()), char(')').skip(spaces()), p);
-    let non_decons = 
-        wildcard_pat().map(|_| Pat::blank())
-        .or(lit().map(Lit::mtch).map(Decons::decons))
-        .or(variable().map(Pat::Var));
-
-    lit().and(
-        spaces().with(many(parenthesized(pat_).or(non_decons.skip(spaces())).map(DeconsOp::App)))
-    )
+    lit().and(spaces().with(many(decons_op())))
     .map(|(c, ops): (Lit, Vec<DeconsOp>)| {
         c.mtch().extend(ops)
     })
@@ -164,7 +166,12 @@ where
 {
     let pat_: fn(&mut I) -> StdParseResult<Pat, I> = |input| pat().parse_stream(input).into();
 
-    pat_.skip(spaces()).map(DeconsOp::App)
+    between(
+        char('(').skip(spaces()), 
+        char(')').skip(spaces()), 
+        pat_
+    )
+        .or(atomic_pat()).map(DeconsOp::App)
 }
 
 pub fn pat<I>() -> impl Parser<I, Output = Pat>
@@ -181,10 +188,10 @@ where
     I: Stream<Token = char>,
 {
     let parenthesized = |p| between(char('(').skip(spaces()), char(')').skip(spaces()), p);
-    let copat_: fn(&mut I) -> StdParseResult<Pat, I> = |input| pat().parse_stream(input).into();
+    let pat_: fn(&mut I) -> StdParseResult<Pat, I> = |input| pat().parse_stream(input).into();
 
-    parenthesized(copat_)
-        .map(|p| CopatOp::App(p))
+    parenthesized(pat_).map(|p| CopatOp::App(p))
+        .or(atomic_pat().map(CopatOp::App))
         .or(char('.').with(lit().map(CopatOp::Dot)))
         .skip(spaces())
 }
