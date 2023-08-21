@@ -151,26 +151,11 @@ where
         .or(variable().map(Pat::Var));
 
     lit().and(
-        spaces()
-        .with(many(parenthesized(pat_).or(non_decons.skip(spaces())).map(DeconsOp::App)))
+        spaces().with(many(parenthesized(pat_).or(non_decons.skip(spaces())).map(DeconsOp::App)))
     )
     .map(|(c, ops): (Lit, Vec<DeconsOp>)| {
         c.mtch().extend(ops)
     })
-    // .or(
-    //     lit().and(
-    //         spaces()
-    //         .with(many(decons_op()))
-    //     )
-    //     .map(|(c, ops): (Lit, Vec<DeconsOp>)| 
-    //         c.mtch().extend(ops)
-    //     )
-    // )
-
-    /*
-    .or(between(char('(').skip(spaces()), char(')').skip(spaces()), pat_))
-        .map(|p: Pat| true)
-        */
 }
 
 pub fn decons_op<I>() -> impl Parser<I, Output = DeconsOp>
