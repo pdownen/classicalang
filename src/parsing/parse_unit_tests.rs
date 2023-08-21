@@ -40,13 +40,16 @@ fn lit_test() {
 #[test]
 fn decons_op_test() {
     assert_eq!(
-        decons_op().easy_parse("(x)").map(|(v, _s)| v),
+        decons_op().easy_parse("x").map(|(v, _s)| v),
         Ok(DeconsOp::App(Name::id("x").bind()))
     );
-
     assert_eq!(
-        decons_op().easy_parse("(X)").map(|(v, _s)| v),
+        decons_op().easy_parse("X").map(|(v, _s)| v),
         Ok(DeconsOp::App(Name::id("X").sym().mtch().decons()))
+    );
+    assert_eq!(
+        decons_op().easy_parse("1").map(|(v, _s)| v),
+        Ok(DeconsOp::App(Lit::Int(1).mtch().decons()))
     );
 }
 
@@ -119,10 +122,6 @@ fn pat_test() {
         Ok(Lit::Str("patterns".to_owned()).mtch().decons())
     );
 
-    assert_eq!(
-        decons_op().easy_parse("(1)").map(|(v, _s)| v),
-        Ok(DeconsOp::App(Lit::Int(1).mtch().decons()))
-    );
     assert_eq!(
         decons().easy_parse("G(1)").map(|(v, _s)| v),
         Ok(Name::id("G").sym().mtch().app(Lit::Int(1).mtch().decons()))

@@ -7,7 +7,7 @@ use quickcheck_macros::quickcheck;
 
 use crate::{
     parsing::parse::*,
-    syntax::{sequential::{Lit, Name, Pat, DeconsOp}, nested::Decons},
+    syntax::{sequential::{Lit, Name, Pat, DeconsOp, Decons }}
 };
 use quickcheck::{Arbitrary, Gen, TestResult, empty_shrinker};
 
@@ -187,6 +187,26 @@ fn lit_parses_some() {
 // arbitrary co/pat cases should pick evenly between
 // stopping and continuing dot/app cases
 
+impl Arbitrary for Decons {
+    fn arbitrary(g: &mut Gen) -> Self {
+        let head = Lit::arbitrary(g).mtch();
+        let mut tail = vec![];
+        while u32::arbitrary(g) % 2 != 0 {
+            tail.push(DeconsOp::arbitrary(g));
+        }
+
+        head.extend(tail)
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        Box::new(
+            (self.head.clone(), self.tail.clone())
+                .shrink()
+                .map(|(h, t)| h.mtch().extend(t))
+        )
+    }
+}
+
 impl Arbitrary for DeconsOp {
     fn arbitrary(g: &mut Gen) -> DeconsOp {
         DeconsOp::App(Pat::arbitrary(g))
@@ -205,15 +225,7 @@ impl Arbitrary for Pat {
                 let name = format!("{}{}", c.to_lowercase(), Name::arbitrary(g));
                 Pat::Var(Name::id(name.as_str()))
             }
-            _ => {
-                let head = Lit::arbitrary(g).mtch();
-                let mut tail = vec![];
-                while u32::arbitrary(g) % 2 != 0 {
-                    tail.push(DeconsOp::arbitrary(g));
-                }
-
-                Pat::Struc(head.extend(tail))
-            }
+            _ => Pat::Struc(Decons::arbitrary(g))
         }
     }
 
@@ -221,7 +233,7 @@ impl Arbitrary for Pat {
         match self {
             Pat::Unused => empty_shrinker(),
             Pat::Var(v) => Box::new(v.shrink().map(Pat::Var)),
-            Pat::Struc(tail) => empty_shrinker(),
+            Pat::Struc(tail) => Box::new(tail.shrink().map(Pat::Struc)),
         }
     }
 }
@@ -229,7 +241,6 @@ impl Arbitrary for Pat {
 fn pat_parses(pattern: Pat) -> bool {
     let printed = pattern.to_string(); 
     let parsed = pat().easy_parse(printed.as_str());
-
 
     match parsed {
         Ok((v, _s)) => {
@@ -255,11 +266,17 @@ fn pat_parses_all(pat: Pat) -> bool {
 fn pat_parses_some() {
     assert!(pat_parses(
         Pat::Struc(
-            Lit::Sym(Name::id("Sym")).mtch()
+            Lit::Sym(Name::id("Sym1")).mtch()
             .extend(vec![
-                DeconsOp::App(Pat::Struc(Lit::int(1).mtch())),
+                DeconsOp::App(Pat::Struc(
+                    Name::id("Sym2").sym().mtch().push(
+                        DeconsOp::App(Pat::Struc(Lit::int(1).mtch())))
+                )),
+                DeconsOp::App(Pat::Unused),
                 DeconsOp::App(Pat::Unused)
             ])
         )
     ));
+    assert!(pat_parses(pat().easy_parse("Sym1 (Sym2 a b c)").unwrap().0));
 }
+

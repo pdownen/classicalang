@@ -143,11 +143,34 @@ where
     I: Stream<Token = char>,
 {   
     let pat_: fn(&mut I) -> StdParseResult<Pat, I> = |input| pat().parse_stream(input).into();
+    
+    let parenthesized = |p| between(char('(').skip(spaces()), char(')').skip(spaces()), p);
+    let non_decons = 
+        wildcard_pat().map(|_| Pat::blank())
+        .or(lit().map(Lit::mtch).map(Decons::decons))
+        .or(variable().map(Pat::Var));
 
-    lit()
-        // .or(between(char('(').skip(spaces()), char(')').skip(spaces()), pat_).map(|c| ))
-        .and(spaces().with(many(decons_op())))
-        .map(|(c, ops)| c.mtch().extend(ops))
+    lit().and(
+        spaces()
+        .with(many(parenthesized(pat_).or(non_decons.skip(spaces())).map(DeconsOp::App)))
+    )
+    .map(|(c, ops): (Lit, Vec<DeconsOp>)| {
+        c.mtch().extend(ops)
+    })
+    // .or(
+    //     lit().and(
+    //         spaces()
+    //         .with(many(decons_op()))
+    //     )
+    //     .map(|(c, ops): (Lit, Vec<DeconsOp>)| 
+    //         c.mtch().extend(ops)
+    //     )
+    // )
+
+    /*
+    .or(between(char('(').skip(spaces()), char(')').skip(spaces()), pat_))
+        .map(|p: Pat| true)
+        */
 }
 
 pub fn decons_op<I>() -> impl Parser<I, Output = DeconsOp>
@@ -156,9 +179,7 @@ where
 {
     let pat_: fn(&mut I) -> StdParseResult<Pat, I> = |input| pat().parse_stream(input).into();
 
-    between(char('(').skip(spaces()), char(')').skip(spaces()), pat_)
-    .or(pat_.skip(spaces()))
-    .map(DeconsOp::App)
+    pat_.skip(spaces()).map(DeconsOp::App)
 }
 
 pub fn pat<I>() -> impl Parser<I, Output = Pat>
@@ -166,8 +187,8 @@ where
     I: Stream<Token = char>,
 {
     (wildcard_pat().map(|_| Pat::blank()))
-        .or(variable().map(Pat::Var))
         .or(decons().map(Pat::Struc))
+        .or(variable().map(Pat::Var))
 }
 
 pub fn copat_op<I>() -> impl Parser<I, Output = CopatOp>

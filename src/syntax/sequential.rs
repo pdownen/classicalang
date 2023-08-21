@@ -243,12 +243,24 @@ impl fmt::Display for Expr {
 // Sym = any identifier name starting with an upper case letter
 
 // Lit ::= Int | Flt | Str | Sym
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub enum Lit {
     Int(i64),
     Flt(f64),
     Str(String),
     Sym(Name),
+}
+
+impl PartialEq for Lit {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Int(l0), Self::Int(r0)) => l0 == r0,
+            (Self::Flt(l0), Self::Flt(r0)) => l0 == r0 || (l0.is_nan() && r0.is_nan()),
+            (Self::Str(l0), Self::Str(r0)) => l0 == r0,
+            (Self::Sym(l0), Self::Sym(r0)) => l0 == r0,
+            _ => false,
+        }
+    }
 }
 
 impl Lit {
@@ -381,8 +393,8 @@ type DeconsTail = Vec<DeconsOp>;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Decons {
-    head: Lit,
-    tail: DeconsTail,
+    pub head: Lit,
+    pub tail: DeconsTail,
 }
 
 impl Decons {
