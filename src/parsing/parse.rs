@@ -177,7 +177,7 @@ pub fn pat<I>() -> impl Parser<I, Output = Pat>
 where
     I: Stream<Token = char>,
 {
-    attempt(atomic_pat().map(Pat::Atom)).or(decons().map(Pat::Struc))
+    attempt(decons().map(Pat::Struc)).or(atomic_pat().map(Pat::Atom))
 }
 
 pub fn copat_op<I>() -> impl Parser<I, Output = CopatOp>

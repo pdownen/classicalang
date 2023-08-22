@@ -45,25 +45,25 @@ fn decons_op_test() {
     );
     assert_eq!(
         decons_op().easy_parse("X").map(|(v, _s)| v),
-        Ok(DeconsOp::App(Name::id("X").sym().mtch().decons()))
+        Ok(DeconsOp::App(Name::id("X").sym().switch().atom()))
     );
     assert_eq!(
         decons_op().easy_parse("1").map(|(v, _s)| v),
-        Ok(DeconsOp::App(Lit::Int(1).mtch().decons()))
+        Ok(DeconsOp::App(Lit::Int(1).switch().atom()))
     );
 }
 
 #[test]
 fn decons_test() {
-    assert_eq!(
-        decons().easy_parse("123").map(|(v, _s)| v),
-        Ok(Lit::int(123).mtch())
-    );
+    // assert_eq!(
+    //     decons().easy_parse("123").map(|(v, _s)| v),
+    //     Ok(Lit::int(123).mtch())
+    // );
 
-    assert_eq!(
-        decons().easy_parse("\"text\"").map(|(v, _s)| v),
-        Ok(Lit::str("text".to_owned()).mtch())
-    );
+    // assert_eq!(
+    //     decons().easy_parse("\"text\"").map(|(v, _s)| v),
+    //     Ok(Lit::str("text".to_owned()).mtch())
+    // );
 
     assert_eq!(
         decons().easy_parse("F(x)(y)").map(|(v, _s)| v),
@@ -75,7 +75,7 @@ fn decons_test() {
     assert_eq!(
         decons().easy_parse("G(1)(a)(b)").map(|(v, _s)| v),
         Ok((Name::id("G").sym().mtch())
-            .app(Lit::int(1).mtch().decons())
+            .app(Lit::int(1).switch().atom())
             .app(Name::id("a").bind().atom())
             .app(Name::id("b").bind().atom()))
     );
@@ -90,65 +90,63 @@ fn pat_test() {
         Ok(Name::id("x"))
     );
 
-    assert_eq!(pat().easy_parse("_").map(|(v, _s)| v), Ok(Pat::blank()));
     assert_eq!(
         atomic_pat().easy_parse("x").map(|(v, _s)| v),
         Ok(AtomicPat::Var(Name::id("x")))
     );
-
     assert_eq!(
-        decons().easy_parse("X").map(|(v, _s)| v),
-        Ok(Name::id("X").sym().mtch())
-    );
-    assert_eq!(
-        decons().easy_parse("45").map(|(v, _s)| v),
-        Ok(Lit::Int(45).mtch())
-    );
-    assert_eq!(
-        decons().easy_parse("\"patterns\"").map(|(v, _s)| v),
-        Ok(Lit::Str("patterns".to_owned()).mtch())
+        atomic_pat().easy_parse("\"patterns\"").map(|(v, _s)| v),
+        Ok(Lit::Str("patterns".to_owned()).switch())
     );
 
+    assert_eq!(
+        pat().easy_parse("_").map(|(v, _s)| v), 
+        Ok(Pat::blank())
+    );
     assert_eq!(
         pat().easy_parse("X").map(|(v, _s)| v),
-        Ok(Name::id("X").sym().mtch().decons())
+        Ok(Name::id("X").sym().switch().atom())
     );
     assert_eq!(
         pat().easy_parse("45").map(|(v, _s)| v),
-        Ok(Lit::Int(45).mtch().decons())
+        Ok(Lit::Int(45).switch().atom())
     );
     assert_eq!(
         pat().easy_parse("\"patterns\"").map(|(v, _s)| v),
-        Ok(Lit::Str("patterns".to_owned()).mtch().decons())
+        Ok(Lit::Str("patterns".to_owned()).switch().atom())
     );
 
     assert_eq!(
         decons().easy_parse("G(1)").map(|(v, _s)| v),
-        Ok(Name::id("G").sym().mtch().app(Lit::Int(1).mtch().decons()))
+        Ok(Name::id("G")
+            .sym().mtch()
+            .app(Lit::Int(1).switch().atom()))
     );
     assert_eq!(
         decons()
             .easy_parse("F(\"argrz\")(\"arg2\")")
             .map(|(v, _s)| v),
         Ok((Name::id("F").sym().mtch())
-            .app(Lit::Str("argrz".to_owned()).mtch().decons())
-            .app(Lit::Str("arg2".to_owned()).mtch().decons()))
+            .app(Lit::Str("argrz".to_owned()).switch().atom())
+            .app(Lit::Str("arg2".to_owned()).switch().atom()))
     );
+
     assert_eq!(
-        decons().easy_parse("H(X(0)(_))(1.002)").map(|(v, _s)| v),
+        pat().easy_parse("H(X(0)(_))(1.002)").map(|(v, _s)| v),
         Ok((Name::id("H").sym().mtch())
             .app(
-                (Lit::Sym(Name::id("X")).mtch())
-                    .app(Lit::Int(0).mtch().decons())
+                (Name::id("X").sym().mtch())
+                    .app(Lit::Int(0).switch().atom())
                     .app(AtomicPat::Unused.atom())
                     .decons()
             )
-            .app(Lit::Flt(1.002).mtch().decons()))
+            .app(Lit::Flt(1.002).switch().atom())
+            .decons())
     );
     assert_eq!(
         pat()
             .easy_parse(
-                "H( X(0)(_)) 
+                "H( X 0  _ ) 
                             (1.002) 
                             (v)"
             )
@@ -156,11 +154,11 @@ fn pat_test() {
         Ok((Name::id("H").sym().mtch())
             .app(
                 (Lit::Sym(Name::id("X")).mtch())
-                    .app(Lit::Int(0).mtch().decons())
+                    .app(Lit::Int(0).switch().atom())
                     .app(AtomicPat::Unused.atom())
                     .decons()
             )
-            .app(Lit::Flt(1.002).mtch().decons())
+            .app(Lit::Flt(1.002).switch().atom())
             .app(Name::id("v").bind().atom())
             .decons())
     );
