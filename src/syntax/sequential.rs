@@ -85,23 +85,14 @@ impl PrettyPrint for Modul {
         RcDoc::concat(
             self.defns
                 .iter()
-                .map(|d| d.to_doc().append(RcDoc::text(";")).append(RcDoc::line()))
-                .collect::<Vec<RcDoc<'_>>>(),
+                .map(|d| d.to_doc().append(RcDoc::text(";")).append(RcDoc::line())),
         )
     }
 }
 
 impl fmt::Display for Modul {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let doc = RcDoc::intersperse(
-            self.defns
-                .iter()
-                .map(|d| RcDoc::text(format!("{};", d)))
-                .collect::<Vec<RcDoc<'_>>>(),
-            RcDoc::hardline(),
-        )
-        .append(RcDoc::nil());
-        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
+        write!(f, "{}", self.to_pretty(MAX_LINE_WIDTH))
     }
 }
 
