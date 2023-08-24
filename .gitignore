@@ -15,3 +15,7 @@ Cargo.lock
 
 # Backup files
 *~
+
+#IDE
+.idea
+.vscode
