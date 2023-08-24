@@ -114,7 +114,6 @@ impl PrettyPrint for Decl {
         match self {
             Decl::Include(e) => RcDoc::text("include")
                 .append(e.to_doc())
-                .append(RcDoc::text(";"))
                 .nest(INDENTATION_WIDTH)
                 .group(),
             Decl::Method(q, e) => q
@@ -122,7 +121,6 @@ impl PrettyPrint for Decl {
                 .append(RcDoc::text(" -> "))
                 .append(RcDoc::line())
                 .append(e.to_doc())
-                .append(RcDoc::text(";"))
                 .nest(INDENTATION_WIDTH)
                 .group(),
             Decl::Bind(p, e) => p
@@ -130,7 +128,6 @@ impl PrettyPrint for Decl {
                 .append(RcDoc::text(" <- "))
                 .append(RcDoc::line())
                 .append(e.to_doc())
-                .append(RcDoc::text(";"))
                 .nest(INDENTATION_WIDTH)
                 .group(),
         }
@@ -212,7 +209,6 @@ impl PrettyPrint for ExprHead {
                 .append(RcDoc::<()>::text("{"))
                 .append(RcDoc::<()>::line())
                 .append(l.to_doc().nest(INDENTATION_WIDTH))
-                .append(RcDoc::<()>::line())
                 .append(RcDoc::<()>::text("}"))
                 .nest(INDENTATION_WIDTH)
                 .group(),
