@@ -85,7 +85,7 @@ impl PrettyPrint for Modul {
         let doc = RcDoc::intersperse(
             self.defns
                 .iter()
-                .map(|d| d.to_doc())
+                .map(|d| d.to_doc().nest(INDENTATION_WIDTH).group())
                 .collect::<Vec<RcDoc<'_>>>(),
             RcDoc::softline(),
         )
@@ -121,9 +121,25 @@ pub enum Decl {
 impl PrettyPrint for Decl {
     fn to_doc(&self) -> RcDoc<'_> {
         match self {
-            Decl::Include(e) => RcDoc::text("include").append(e.to_doc()),
-            Decl::Method(q, e) => q.to_doc().append(RcDoc::text(" -> ")).append(e.to_doc()),
-            Decl::Bind(p, e) => p.to_doc().append(RcDoc::text(" <- ")).append(e.to_doc()),
+            Decl::Include(e) => RcDoc::text("include")
+                .append(e.to_doc())
+                .append(RcDoc::text(";"))
+                .nest(INDENTATION_WIDTH)
+                .group(),
+            Decl::Method(q, e) => q.to_doc()
+                .append(RcDoc::text(" -> "))
+                .append(RcDoc::line())
+                .append(e.to_doc())
+                .append(RcDoc::text(";"))
+                .nest(INDENTATION_WIDTH)
+                .group(),
+            Decl::Bind(p, e) => p.to_doc()
+                .append(RcDoc::text(" <- "))
+                .append(RcDoc::line())
+                .append(e.to_doc())
+                .append(RcDoc::text(";"))
+                .nest(INDENTATION_WIDTH)
+                .group(),
         }
     }
 }
@@ -135,13 +151,19 @@ impl fmt::Display for Decl {
             Decl::Method(q, e) => {
                 let doc: RcDoc<'_> = RcDoc::text(q.to_string())
                     .append(RcDoc::text(" -> "))
-                    .append(RcDoc::text(e.to_string()));
+                    .append(RcDoc::line())
+                    .append(RcDoc::text(e.to_string()))
+                    .nest(INDENTATION_WIDTH)
+                    .group();
                 write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
             }
             Decl::Bind(p, e) => {
                 let doc: RcDoc<'_> = RcDoc::text(p.to_string())
                     .append(RcDoc::text(" <- "))
-                    .append(RcDoc::text(e.to_string()));
+                    .append(RcDoc::text(e.to_string()))
+                    .append(RcDoc::line())
+                    .nest(INDENTATION_WIDTH)
+                    .group();
                 write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
             }
         }
@@ -193,15 +215,14 @@ impl PrettyPrint for ExprHead {
         let doc = match self {
             ExprHead::Var(x) => x.to_doc(),
             ExprHead::Const(c) => c.to_doc(),
-            ExprHead::Lambda(l) => RcDoc::<()>::text("{")
-                .append(
-                    RcDoc::<()>::line_()
-                        .append(l.to_doc())
-                        .nest(INDENTATION_WIDTH)
-                        .group(),
-                )
+            ExprHead::Lambda(l) => RcDoc::<()>::line()
+                .append(RcDoc::<()>::text("{"))
                 .append(RcDoc::<()>::line())
-                .append(RcDoc::<()>::text("}")),
+                .append(l.to_doc().nest(INDENTATION_WIDTH))
+                .append(RcDoc::<()>::line())
+                .append(RcDoc::<()>::text("}"))
+                .nest(INDENTATION_WIDTH)
+                .group(),
         };
         doc
     }
