@@ -85,9 +85,9 @@ impl PrettyPrint for Modul {
         let doc = RcDoc::intersperse(
             self.defns
                 .iter()
-                .map(|d| d.to_doc().nest(INDENTATION_WIDTH).group())
+                .map(|d| d.to_doc())
                 .collect::<Vec<RcDoc<'_>>>(),
-            RcDoc::softline(),
+            RcDoc::line(),
         )
             .append(RcDoc::nil());
         doc
