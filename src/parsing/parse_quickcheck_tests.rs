@@ -371,10 +371,11 @@ fn copat_parses_some() {
         copat().easy_parse("Sym1 (Sym2 a b c)").unwrap().0
     ));
     assert!(copat_parses(
-        (Name::id("Symbol").bind().this())
+        (Name::id("Symbol").sym().switch().this())
             .app(Name::id("x").bind().atom())
             .app(Name::id("y").bind().atom())
     ));
+    // Symbol(x)(y)
 }
 
 impl Arbitrary for ExprHead {
@@ -462,6 +463,7 @@ fn expr_parses(expression: Expr) -> bool {
 
 #[test]
 fn expr_parses_some() {
+    assert!(expr_parses(Name::id("x").refer()));
     assert!(expr_parses(expr().easy_parse("3").unwrap().0));
     assert!(expr_parses(expr().easy_parse("Sym1 (Sym2 a b c)").unwrap().0));
 }
