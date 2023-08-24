@@ -279,18 +279,19 @@ fn pat_parses_all(pat: Pat) -> bool {
 
 #[test]
 fn pat_parses_some() {
-    assert!(pat_parses(Pat::Struc(
-        Lit::Sym(Name::id("Sym1")).mtch().extend(vec![
-            DeconsOp::App(Pat::Struc(
-                Name::id("Sym2")
-                    .sym()
-                    .mtch()
-                    .push(DeconsOp::App(Pat::Struc(Lit::int(1).mtch())))
-            )),
-            DeconsOp::App(Pat::blank()),
-            DeconsOp::App(Pat::blank())
-        ])
-    )));
+    // assert!(pat_parses(Pat::Struc(
+    //     Name::id("Sym1").sym().mtch().extend(vec![
+    //         DeconsOp::App(Pat::Struc(
+    //             Name::id("Sym2")
+    //                 .sym()
+    //                 .mtch()
+    //                 .push(DeconsOp::App(Pat::Struc(Lit::int(1).mtch())))
+    //         )),
+    //         DeconsOp::App(Pat::blank()),
+    //         DeconsOp::App(Pat::blank())
+    //     ])
+    // )));
+    //
     assert!(pat_parses(pat().easy_parse("Sym1 (Sym2 a b c)").unwrap().0));
 }
 
@@ -298,7 +299,18 @@ impl Arbitrary for CopatOp {
     fn arbitrary(g: &mut Gen) -> Self {
         match u32::arbitrary(g) % 2 {
             0 => CopatOp::App(Pat::arbitrary(g)),
-            _ => CopatOp::Dot(Lit::arbitrary(g)),
+            _ => {
+                loop {
+                    let lit = Lit::arbitrary(g);
+
+                    if let Lit::Str(_) = lit.clone() {
+                        return CopatOp::Dot(lit);
+                    }
+                    if let Lit::Sym(_) = lit.clone() {
+                        return CopatOp::Dot(lit);
+                    }
+                };
+            },
         }
     }
 

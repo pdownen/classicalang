@@ -189,7 +189,7 @@ where
 
     parenthesized(pat_)
         .map(|p| CopatOp::App(p))
-        // .or(atomic_pat().map(CopatOp::App))
+        .or(atomic_pat().map(|p| CopatOp::App(p.atom())))
         .or(char('.').with(lit().map(CopatOp::Dot)))
         .skip(spaces())
 }
