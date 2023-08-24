@@ -4,6 +4,15 @@ use std::fmt;
 pub const MAX_LINE_WIDTH: usize = 80;
 pub const INDENTATION_WIDTH: isize = 4;
 
+pub(crate) trait PrettyPrint {
+    fn to_doc(&self) -> RcDoc<()>;
+    fn to_pretty(&self, width: usize) -> String {
+        let mut w = Vec::new();
+        self.to_doc().render(width, &mut w).unwrap();
+        String::from_utf8(w).unwrap()
+    }
+}
+
 #[derive(PartialEq, Eq, Clone)]
 pub struct Name {
     pub id: String,
@@ -25,16 +34,11 @@ impl Name {
     pub fn bind(self) -> AtomicPat {
         AtomicPat::Var(self)
     }
+}
 
-    pub fn to_doc(&self) -> RcDoc<()> {
-        let doc = RcDoc::text(&self.id);
-        doc
-    }
-
-    pub fn to_pretty(&self, width: usize) -> String {
-        let mut w = Vec::new();
-        self.to_doc().render(width, &mut w).unwrap();
-        String::from_utf8(w).unwrap()
+impl PrettyPrint for Name {
+    fn to_doc(&self) -> RcDoc<()> {
+        RcDoc::text(&self.id)
     }
 }
 
@@ -74,8 +78,10 @@ impl Modul {
         self.defns.extend(more.defns);
         self
     }
+}
 
-    pub fn to_doc(&self) -> RcDoc<()> {
+impl PrettyPrint for Modul {
+    fn to_doc(&self) -> RcDoc<()> {
         let doc = RcDoc::intersperse(
             self.defns
                 .iter()
@@ -83,14 +89,8 @@ impl Modul {
                 .collect::<Vec<RcDoc<'_>>>(),
             RcDoc::softline(),
         )
-        .append(RcDoc::nil());
+            .append(RcDoc::nil());
         doc
-    }
-
-    pub fn to_pretty(&self, width: usize) -> String {
-        let mut w = Vec::new();
-        self.to_doc().render(width, &mut w).unwrap();
-        String::from_utf8(w).unwrap()
     }
 }
 
@@ -118,19 +118,13 @@ pub enum Decl {
     Bind(Pat, Expr),
 }
 
-impl Decl {
-    pub fn to_doc(&self) -> RcDoc<'_> {
+impl PrettyPrint for Decl {
+    fn to_doc(&self) -> RcDoc<'_> {
         match self {
             Decl::Include(e) => RcDoc::text("include").append(e.to_doc()),
             Decl::Method(q, e) => q.to_doc().append(RcDoc::text(" -> ")).append(e.to_doc()),
             Decl::Bind(p, e) => p.to_doc().append(RcDoc::text(" <- ")).append(e.to_doc()),
         }
-    }
-
-    pub fn to_pretty(&self, width: usize) -> String {
-        let mut w = Vec::new();
-        self.to_doc().render(width, &mut w).unwrap();
-        String::from_utf8(w).unwrap()
     }
 }
 
@@ -194,6 +188,25 @@ impl ExprHead {
     }
 }
 
+impl PrettyPrint for ExprHead {
+    fn to_doc(&self) -> RcDoc<()> {
+        let doc = match self {
+            ExprHead::Var(x) => x.to_doc(),
+            ExprHead::Const(c) => c.to_doc(),
+            ExprHead::Lambda(l) => RcDoc::<()>::text("{")
+                .append(
+                    RcDoc::<()>::line_()
+                        .append(l.to_doc())
+                        .nest(INDENTATION_WIDTH)
+                        .group(),
+                )
+                .append(RcDoc::<()>::line())
+                .append(RcDoc::<()>::text("}")),
+        };
+        doc
+    }
+}
+
 impl Expr {
     pub fn is_atomic(&self) -> bool {
         self.tail.is_empty()
@@ -220,8 +233,10 @@ impl Expr {
     pub fn included(self) -> Decl {
         Decl::Include(self)
     }
+}
 
-    pub fn to_doc(&self) -> RcDoc<()> {
+impl PrettyPrint for Expr {
+    fn to_doc(&self) -> RcDoc<()> {
         let head_doc = self.head.to_doc();
         let op_docs: Vec<RcDoc<'_>> = self
             .tail
@@ -234,41 +249,10 @@ impl Expr {
         let doc = RcDoc::concat(vec![head_doc].into_iter().chain(op_docs));
         doc
     }
-
-    pub fn to_pretty(&self, width: usize) -> String {
-        let mut w = Vec::new();
-        self.to_doc().render(width, &mut w).unwrap();
-        String::from_utf8(w).unwrap()
-    }
 }
 
-impl ExprHead {
-    pub fn to_doc(&self) -> RcDoc<()> {
-        let doc = match self {
-            ExprHead::Var(x) => x.to_doc(),
-            ExprHead::Const(c) => c.to_doc(),
-            ExprHead::Lambda(l) => RcDoc::<()>::text("{")
-                .append(
-                    RcDoc::<()>::line_()
-                        .append(l.to_doc())
-                        .nest(INDENTATION_WIDTH)
-                        .group(),
-                )
-                .append(RcDoc::<()>::line())
-                .append(RcDoc::<()>::text("}")),
-        };
-        doc
-    }
-
-    pub fn to_pretty(&self, width: usize) -> String {
-        let mut w = Vec::new();
-        self.to_doc().render(width, &mut w).unwrap();
-        String::from_utf8(w).unwrap()
-    }
-}
-
-impl ExprOp {
-    pub fn to_doc(&self) -> RcDoc<()> {
+impl PrettyPrint for ExprOp {
+    fn to_doc(&self) -> RcDoc<()> {
         let doc = match self {
             ExprOp::App(a) if a.is_atomic() => RcDoc::<()>::text(" ").append(a.to_doc()),
             ExprOp::App(a) => RcDoc::<()>::text("(")
@@ -277,12 +261,6 @@ impl ExprOp {
             ExprOp::Dot(m) => RcDoc::<()>::text(".").append(m.to_doc()),
         };
         doc
-    }
-
-    pub fn to_pretty(&self, width: usize) -> String {
-        let mut w = Vec::new();
-        self.to_doc().render(width, &mut w).unwrap();
-        String::from_utf8(w).unwrap()
     }
 }
 
@@ -407,8 +385,10 @@ impl Lit {
             tail: Vec::new(),
         }
     }
+}
 
-    pub fn to_doc(&self) -> RcDoc<()> {
+impl PrettyPrint for Lit {
+    fn to_doc(&self) -> RcDoc<()> {
         let doc = match self {
             Lit::Int(i) => RcDoc::<()>::text(i.to_string()),
             Lit::Flt(n) => RcDoc::<()>::text(format!("{:?}", n)),
@@ -416,12 +396,6 @@ impl Lit {
             Lit::Sym(s) => RcDoc::<()>::text(s.to_string()),
         };
         doc
-    }
-
-    pub fn to_pretty(&self, width: usize) -> String {
-        let mut w = Vec::new();
-        self.to_doc().render(width, &mut w).unwrap();
-        String::from_utf8(w).unwrap()
     }
 }
 
@@ -480,8 +454,10 @@ impl Copat {
     pub fn dot(self, field: Lit) -> Copat {
         self.push(CopatOp::Dot(field))
     }
+}
 
-    pub fn to_doc(&self) -> RcDoc<()> {
+impl PrettyPrint for Copat {
+    fn to_doc(&self) -> RcDoc<()> {
         let mut doc: RcDoc<'_, ()> = RcDoc::nil();
         doc = doc.append(self.head.to_doc());
         for op in &self.tail {
@@ -489,16 +465,10 @@ impl Copat {
         }
         doc
     }
-
-    pub fn to_pretty(&self, width: usize) -> String {
-        let mut w = Vec::new();
-        self.to_doc().render(width, &mut w).unwrap();
-        String::from_utf8(w).unwrap()
-    }
 }
 
-impl CopatOp {
-    pub fn to_doc(&self) -> RcDoc<()> {
+impl PrettyPrint for CopatOp {
+    fn to_doc(&self) -> RcDoc<()> {
         let doc = match self {
             CopatOp::App(p) if p.is_atomic() => RcDoc::<()>::text(" ").append(p.to_doc()),
             CopatOp::App(p) => RcDoc::<()>::text("(")
@@ -507,12 +477,6 @@ impl CopatOp {
             CopatOp::Dot(c) => RcDoc::<()>::text(".").append(c.to_doc()),
         };
         doc
-    }
-
-    pub fn to_pretty(&self, width: usize) -> String {
-        let mut w = Vec::new();
-        self.to_doc().render(width, &mut w).unwrap();
-        String::from_utf8(w).unwrap()
     }
 }
 
@@ -583,19 +547,15 @@ impl Pat {
     pub fn blank() -> Pat {
         AtomicPat::blank().atom()
     }
+}
 
-    pub fn to_doc(&self) -> RcDoc<()> {
+impl PrettyPrint for Pat {
+    fn to_doc(&self) -> RcDoc<()> {
         let doc = match self {
             Pat::Atom(a) => a.to_doc(),
             Pat::Struc(s) => s.to_doc(),
         };
         doc
-    }
-
-    pub fn to_pretty(&self, width: usize) -> String {
-        let mut w = Vec::new();
-        self.to_doc().render(width, &mut w).unwrap();
-        String::from_utf8(w).unwrap()
     }
 }
 
@@ -624,20 +584,16 @@ impl AtomicPat {
             tail: Vec::new(),
         }
     }
+}
 
-    pub fn to_doc(&self) -> RcDoc<()> {
+impl PrettyPrint for AtomicPat {
+    fn to_doc(&self) -> RcDoc<()> {
         let doc = match self {
             AtomicPat::Unused => RcDoc::<()>::text("_"),
             AtomicPat::Var(x) => x.to_doc(),
             AtomicPat::Const(c) => c.to_doc(),
         };
         doc
-    }
-
-    pub fn to_pretty(&self, width: usize) -> String {
-        let mut w = Vec::new();
-        self.to_doc().render(width, &mut w).unwrap();
-        String::from_utf8(w).unwrap()
     }
 }
 
@@ -670,8 +626,10 @@ impl Decons {
     pub fn app(self, arg: Pat) -> Decons {
         self.push(DeconsOp::App(arg))
     }
+}
 
-    pub fn to_doc(&self) -> RcDoc<()> {
+impl PrettyPrint for Decons {
+    fn to_doc(&self) -> RcDoc<()> {
         let mut doc: RcDoc<'_, ()> = RcDoc::nil();
         doc = doc.append(self.head.to_doc());
         for op in &self.tail {
@@ -679,16 +637,10 @@ impl Decons {
         }
         doc
     }
-
-    pub fn to_pretty(&self, width: usize) -> String {
-        let mut w = Vec::new();
-        self.to_doc().render(width, &mut w).unwrap();
-        String::from_utf8(w).unwrap()
-    }
 }
 
-impl DeconsOp {
-    pub fn to_doc(&self) -> RcDoc<()> {
+impl PrettyPrint for DeconsOp {
+    fn to_doc(&self) -> RcDoc<()> {
         let doc = match self {
             DeconsOp::App(p) if p.is_atomic() => RcDoc::<()>::text(" ").append(p.to_doc()),
             DeconsOp::App(p) => RcDoc::<()>::text("(")
@@ -696,12 +648,6 @@ impl DeconsOp {
                 .append(RcDoc::<()>::text(")")),
         };
         doc
-    }
-
-    pub fn to_pretty(&self, width: usize) -> String {
-        let mut w = Vec::new();
-        self.to_doc().render(width, &mut w).unwrap();
-        String::from_utf8(w).unwrap()
     }
 }
 

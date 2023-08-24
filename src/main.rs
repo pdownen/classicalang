@@ -3,7 +3,7 @@
 mod syntax;
 use combine::EasyParser;
 use parsing::parse::{modul, whole_input};
-use syntax::sequential::{Lit, Modul, Name, Pat};
+use syntax::sequential::{Lit, Modul, Name, Pat, PrettyPrint};
 
 mod parsing;
 
