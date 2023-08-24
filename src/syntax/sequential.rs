@@ -82,15 +82,12 @@ impl Modul {
 
 impl PrettyPrint for Modul {
     fn to_doc(&self) -> RcDoc<()> {
-        let doc = RcDoc::intersperse(
+        RcDoc::concat(
             self.defns
                 .iter()
-                .map(|d| d.to_doc())
+                .map(|d| d.to_doc().append(RcDoc::text(";")).append(RcDoc::line()))
                 .collect::<Vec<RcDoc<'_>>>(),
-            RcDoc::line(),
         )
-            .append(RcDoc::nil());
-        doc
     }
 }
 
@@ -126,14 +123,16 @@ impl PrettyPrint for Decl {
                 .append(RcDoc::text(";"))
                 .nest(INDENTATION_WIDTH)
                 .group(),
-            Decl::Method(q, e) => q.to_doc()
+            Decl::Method(q, e) => q
+                .to_doc()
                 .append(RcDoc::text(" -> "))
                 .append(RcDoc::line())
                 .append(e.to_doc())
                 .append(RcDoc::text(";"))
                 .nest(INDENTATION_WIDTH)
                 .group(),
-            Decl::Bind(p, e) => p.to_doc()
+            Decl::Bind(p, e) => p
+                .to_doc()
                 .append(RcDoc::text(" <- "))
                 .append(RcDoc::line())
                 .append(e.to_doc())
