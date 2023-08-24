@@ -11,6 +11,9 @@ pub(crate) trait PrettyPrint {
         self.to_doc().render(width, &mut w).unwrap();
         String::from_utf8(w).unwrap()
     }
+    fn pretty_fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_pretty(MAX_LINE_WIDTH))
+    }
 }
 
 #[derive(PartialEq, Eq, Clone)]
@@ -92,7 +95,7 @@ impl PrettyPrint for Modul {
 
 impl fmt::Display for Modul {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.to_pretty(MAX_LINE_WIDTH))
+        self.pretty_fmt(f)
     }
 }
 
