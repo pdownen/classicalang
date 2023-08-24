@@ -476,21 +476,21 @@ impl Arbitrary for Decl {
         }
     }
 
-    // fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-    //     match self {
-    //         Decl::Include(e) => Box::new(e.shrink().map(Decl::Include)),
-    //         Decl::Method(c, e) => Box::new(
-    //             (c.clone(), e.clone())
-    //                 .shrink()
-    //                 .map(|(c, e)| Decl::Method(c, e))
-    //         ),
-    //         Decl::Bind(p, e) => Box::new(
-    //             (p.clone(), e.clone())
-    //                 .shrink()
-    //                 .map(|(p, e)| Decl::Bind(p, e))
-    //         ),
-    //     }
-    // }
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        match self {
+            Decl::Include(e) => Box::new(e.shrink().map(Decl::Include)),
+            Decl::Method(c, e) => Box::new(
+                (c.clone(), e.clone())
+                    .shrink()
+                    .map(|(c, e)| Decl::Method(c, e))
+            ),
+            Decl::Bind(p, e) => Box::new(
+                (p.clone(), e.clone())
+                    .shrink()
+                    .map(|(p, e)| Decl::Bind(p, e))
+            ),
+        }
+    }
 }
 
 fn decl_parses(declaration: Decl) -> bool {
