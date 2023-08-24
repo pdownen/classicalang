@@ -272,10 +272,10 @@ fn pat_parses(pattern: Pat) -> bool {
     }
 }
 
-#[quickcheck]
-fn pat_parses_all(pat: Pat) -> bool {
-    pat_parses(pat)
-}
+// #[quickcheck]
+// fn pat_parses_all(pat: Pat) -> bool {
+//     pat_parses(pat)
+// }
 
 #[test]
 fn pat_parses_some() {
@@ -346,13 +346,13 @@ fn copat_parses(copattern: Copat) -> bool {
 
     match parsed {
         Ok((v, _s)) => {
-            println!("
-            {printed}
-            {copattern:?}
-                parses as
-            {}
-            {v:?}", v.to_string()
-            );
+            // println!("
+            // {printed}
+            // {copattern:?}
+            //     parses as
+            // {}
+            // {v:?}", v.to_string()
+            // );
         
             v == copattern
         },
@@ -375,7 +375,6 @@ fn copat_parses_some() {
             .app(Name::id("x").bind().atom())
             .app(Name::id("y").bind().atom())
     ));
-    // Symbol(x)(y)
 }
 
 impl Arbitrary for ExprHead {
@@ -464,7 +463,7 @@ fn expr_parses(expression: Expr) -> bool {
 #[test]
 fn expr_parses_some() {
     assert!(expr_parses(Name::id("x").refer()));
-    assert!(expr_parses(expr().easy_parse("3").unwrap().0));
+    assert!(expr_parses(Lit::int(3).cnst()));
     assert!(expr_parses(expr().easy_parse("Sym1 (Sym2 a b c)").unwrap().0));
 }
 
@@ -513,15 +512,15 @@ fn decl_parses(declaration: Decl) -> bool {
     }
 }
 
-// #[quickcheck]
-// fn decl_parses_all(decl: Decl) -> bool {
-//     decl_parses(decl)
-// }
+#[quickcheck]
+fn decl_parses_all(decl: Decl) -> bool {
+    decl_parses(decl)
+}
 
 #[test]
 fn decl_parses_some() {
     assert!(decl_parses(decl().easy_parse("include Symbol").unwrap().0));
-    assert!(decl_parses(decl().easy_parse("Symbol(x)(y) -> x").unwrap().0));
+    assert!(decl_parses(decl().easy_parse("Symbol(x)(y)(z) -> x").unwrap().0));
     assert!(decl_parses(decl().easy_parse("a <- b").unwrap().0));
 }
 

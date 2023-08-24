@@ -199,7 +199,7 @@ where
     I: Stream<Token = char>,
 {
     atomic_pat()
-        .and(many(copat_op()))
+        .and(many(attempt(copat_op())))
         .map(|(apat, tail)| apat.this().extend(tail))
 }
 
