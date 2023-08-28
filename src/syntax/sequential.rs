@@ -118,14 +118,14 @@ impl PrettyPrint for Decl {
                 .group(),
             Decl::Method(q, e) => q
                 .to_doc()
-                .append(RcDoc::text(" -> "))
+                .append(RcDoc::text(" ->"))
                 .append(RcDoc::line())
                 .append(e.to_doc())
                 .nest(INDENTATION_WIDTH)
                 .group(),
             Decl::Bind(p, e) => p
                 .to_doc()
-                .append(RcDoc::text(" <- "))
+                .append(RcDoc::text(" <-"))
                 .append(RcDoc::line())
                 .append(e.to_doc())
                 .nest(INDENTATION_WIDTH)
