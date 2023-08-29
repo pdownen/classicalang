@@ -2,7 +2,7 @@ use pretty::{Arena, DocAllocator, DocBuilder, RcDoc};
 use std::fmt;
 
 pub const MAX_LINE_WIDTH: usize = 80;
-pub const INDENTATION_WIDTH: isize = 4;
+pub const INDENTATION_WIDTH: isize = 2;
 
 pub(crate) trait PrettyPrint {
     fn to_doc(&self) -> RcDoc<()>;
@@ -209,8 +209,7 @@ impl PrettyPrint for ExprHead {
         let doc = match self {
             ExprHead::Var(x) => x.to_doc(),
             ExprHead::Const(c) => c.to_doc(),
-            ExprHead::Lambda(l) => RcDoc::<()>::line()
-                .append(RcDoc::<()>::text("{"))
+            ExprHead::Lambda(l) => RcDoc::<()>::text("{")
                 .append(
                     RcDoc::<()>::line()
                         .append(l.to_doc())
