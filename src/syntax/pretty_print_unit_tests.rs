@@ -8,8 +8,8 @@ use crate::{
 #[test]
 fn pretty_test() {
     let indentation_width = 80;
-    let t = "x -> y;";
-    let parsed = match whole_input(modul()).easy_parse(t) {
+    let input = "x -> y;";
+    let parsed = match whole_input(modul()).easy_parse(input) {
         Ok((v1, _s)) => v1,
         Err(e) => panic!("An error occurred: {:?}", e)
     };
