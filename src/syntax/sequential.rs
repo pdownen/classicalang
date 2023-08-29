@@ -81,6 +81,10 @@ impl Modul {
         self.defns.extend(more.defns);
         self
     }
+
+    pub fn lambda(self) -> Expr {
+        ExprHead::Lambda(self).head()
+    }
 }
 
 impl PrettyPrint for Modul {
@@ -356,7 +360,10 @@ impl PartialEq for Lit {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Int(l0), Self::Int(r0)) => l0 == r0,
-            (Self::Flt(l0), Self::Flt(r0)) => l0 == r0 || (l0.is_nan() && r0.is_nan()),
+            (Self::Flt(l0), Self::Flt(r0)) => 
+                l0 == r0 
+                || (l0.is_nan() && r0.is_nan())
+                || (l0.is_infinite() && r0.is_infinite()),
             (Self::Str(l0), Self::Str(r0)) => l0 == r0,
             (Self::Sym(l0), Self::Sym(r0)) => l0 == r0,
             _ => false,
