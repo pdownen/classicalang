@@ -11,15 +11,16 @@ fn pretty_test() {
     let t = "x -> y;";
     let parsed = match whole_input(modul()).easy_parse(t) {
         Ok((v1, _s)) => v1,
-        Err(e) => {
-            //println!("{:?}", e);
-            //assert!(false, "An error occurred: {:?}", e);
-            //Modul::top();
-            panic!("An error occurred: {:?}", e);
-        }
+        Err(e) => panic!("An error occurred: {:?}", e)
     };
-    //assert_eq!(
-        //parsed,
-        //whole_input(modul()).easy_parse(parsed.to_pretty()).map(|(v, _s)| v)
-    //);
+    let pretty_str = parsed.to_pretty(indentation_width);
+    let pretty_str = pretty_str.as_str();
+    let parsed_pretty = match whole_input(modul()).easy_parse(pretty_str) {
+        Ok((v1, _s)) => v1,
+        Err(e) => panic!("An error occurred: {:?}", e)
+    };
+    assert_eq!(
+        parsed,
+        parsed_pretty
+    );
 }
