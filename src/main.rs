@@ -19,6 +19,34 @@ fn compare_output<T: Debug + Display>(x: &T) {
     println!("----------");
 }
 
+fn test_pretty_printer<>() {
+    loop {
+        let stdin = std::io::stdin();
+        for line in stdin.lock().lines() {
+            let line = line.unwrap();
+            let line = line.as_str();
+            match whole_input(modul()).easy_parse(line).map(|(v1, _s)| v1) {
+                Ok(v1) => {
+                    let pretty_line = v1.to_pretty(80);
+                    let result = {
+                        let pretty_str_ref: &str = &pretty_line;
+                        whole_input(modul()).easy_parse(pretty_str_ref)
+                    };
+                    match result {
+                        Ok((v2, _s)) => {
+                            if v1 != v2 {
+                                println!("Pretty printing failed");
+                            }
+                        }
+                        Err(e) => println!("{:?}", e),
+                    }
+                },
+                Err(e) => println!("{e}"),
+            };
+        }
+    }
+}
+
 fn main() {
     let ex1 = Name::id("self").bind().this();
     compare_output(&ex1);
@@ -247,7 +275,7 @@ fn main() {
 
     let math_ex = whole_input(modul())
         .easy_parse(
-            "    
+            "
             fact(0) -> 1;
             fact(n) -> times(n)(fact(minus(n)(1)));",
         )
@@ -261,6 +289,7 @@ fn main() {
         ex5
     );
     */
+    test_pretty_printer();
 
     loop {
         let stdin = std::io::stdin();
