@@ -19,30 +19,32 @@ fn compare_output<T: Debug + Display>(x: &T) {
     println!("----------");
 }
 
-fn test_pretty_printer<>() {
+fn test_pretty_printer() {
+    let indentation_width = 80;
     loop {
         let stdin = std::io::stdin();
         for line in stdin.lock().lines() {
             let line = line.unwrap();
             let line = line.as_str();
-            match whole_input(modul()).easy_parse(line).map(|(v1, _s)| v1) {
-                Ok(v1) => {
-                    let pretty_line = v1.to_pretty(80);
-                    let result = {
-                        let pretty_str_ref: &str = &pretty_line;
-                        whole_input(modul()).easy_parse(pretty_str_ref)
-                    };
-                    match result {
-                        Ok((v2, _s)) => {
-                            if v1 != v2 {
-                                println!("Pretty printing failed");
-                            }
-                        }
-                        Err(e) => println!("{:?}", e),
-                    }
-                },
-                Err(e) => println!("{e}"),
+            let v1 = match whole_input(modul()).easy_parse(line) {
+                Ok((v1, _s)) => v1,
+                Err(e) => {
+                    println!("{:?}", e);
+                    continue;
+                }
             };
+            let pretty_str = v1.to_pretty(indentation_width);
+            let pretty_str = pretty_str.as_str();
+            let v2 = match whole_input(modul()).easy_parse(pretty_str) {
+                Ok((v2, _s)) => v2,
+                Err(e) => {
+                    println!("{:?}", e);
+                    continue;
+                }
+            };
+            if v1 != v2 {
+                println!("Pretty printing failed");
+            }
         }
     }
 }
