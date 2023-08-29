@@ -211,10 +211,12 @@ impl PrettyPrint for ExprHead {
             ExprHead::Const(c) => c.to_doc(),
             ExprHead::Lambda(l) => RcDoc::<()>::line()
                 .append(RcDoc::<()>::text("{"))
-                .append(RcDoc::<()>::line())
-                .append(l.to_doc().nest(INDENTATION_WIDTH))
+                .append(
+                    RcDoc::<()>::line()
+                        .append(l.to_doc())
+                        .nest(INDENTATION_WIDTH),
+                )
                 .append(RcDoc::<()>::text("}"))
-                .nest(INDENTATION_WIDTH)
                 .group(),
         };
         doc
@@ -252,15 +254,10 @@ impl Expr {
 impl PrettyPrint for Expr {
     fn to_doc(&self) -> RcDoc<()> {
         let head_doc = self.head.to_doc();
-        let op_docs: Vec<RcDoc<'_>> = self
-            .tail
-            .iter()
-            .map(|op| {
-                let op_doc = op.to_doc();
-                op_doc
-            })
-            .collect();
-        let doc = RcDoc::concat(vec![head_doc].into_iter().chain(op_docs));
+        let op_docs: Vec<RcDoc<'_>> = self.tail.iter().map(|o| o.to_doc()).collect();
+        let doc = head_doc
+            .append(RcDoc::concat(op_docs).nest(INDENTATION_WIDTH))
+            .group();
         doc
     }
 }
@@ -268,11 +265,14 @@ impl PrettyPrint for Expr {
 impl PrettyPrint for ExprOp {
     fn to_doc(&self) -> RcDoc<()> {
         let doc = match self {
-            ExprOp::App(a) if a.is_atomic() => RcDoc::<()>::text(" ").append(a.to_doc()),
-            ExprOp::App(a) => RcDoc::<()>::text("(")
+            ExprOp::App(a) if a.is_atomic() => RcDoc::line().append(a.to_doc()),
+            ExprOp::App(a) => RcDoc::line()
+                .append(RcDoc::<()>::text("("))
                 .append(a.to_doc())
                 .append(RcDoc::<()>::text(")")),
-            ExprOp::Dot(m) => RcDoc::<()>::text(".").append(m.to_doc()),
+            ExprOp::Dot(m) => RcDoc::line_()
+                .append(RcDoc::<()>::text("."))
+                .append(m.to_doc()),
         };
         doc
     }
@@ -332,10 +332,7 @@ impl fmt::Display for Expr {
         let op_docs: Vec<RcDoc<'_>> = self
             .tail
             .iter()
-            .map(|op| {
-                let op_str = op.to_string();
-                RcDoc::text(op_str)
-            })
+            .map(|op| RcDoc::line().append(op.to_doc()))
             .collect();
         let doc = RcDoc::concat(vec![head_doc].into_iter().chain(op_docs));
         write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
@@ -360,10 +357,9 @@ impl PartialEq for Lit {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Int(l0), Self::Int(r0)) => l0 == r0,
-            (Self::Flt(l0), Self::Flt(r0)) => 
-                l0 == r0 
-                || (l0.is_nan() && r0.is_nan())
-                || (l0.is_infinite() && r0.is_infinite()),
+            (Self::Flt(l0), Self::Flt(r0)) => {
+                l0 == r0 || (l0.is_nan() && r0.is_nan()) || (l0.is_infinite() && r0.is_infinite())
+            }
             (Self::Str(l0), Self::Str(r0)) => l0 == r0,
             (Self::Sym(l0), Self::Sym(r0)) => l0 == r0,
             _ => false,
