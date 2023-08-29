@@ -291,7 +291,7 @@ fn main() {
         ex5
     );
     */
-    test_pretty_printer();
+    // test_pretty_printer();
 
     loop {
         let stdin = std::io::stdin();

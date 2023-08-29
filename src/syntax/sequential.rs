@@ -116,7 +116,7 @@ pub enum Decl {
 impl PrettyPrint for Decl {
     fn to_doc(&self) -> RcDoc<'_> {
         match self {
-            Decl::Include(e) => RcDoc::text("include")
+            Decl::Include(e) => RcDoc::text("include ")
                 .append(e.to_doc())
                 .nest(INDENTATION_WIDTH)
                 .group(),

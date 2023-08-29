@@ -574,7 +574,7 @@ fn modul_parses(module: Modul) -> bool {
     match parsed {
         Ok((v, _s)) => {
         println!("{module}{module:?}
-            parses as\n{}{v:?}\n",v.to_string()
+            parses as\n{}{v:?}\n", v.to_string()
         );
 
             v == module
