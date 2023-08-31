@@ -220,11 +220,14 @@ impl Arbitrary for Decons {
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        Box::new(
-            (self.head.clone(), self.tail.clone())
-                .shrink()
-                .map(|(h, t)| h.mtch().extend(t)),
-        )
+        if self.tail.len() > 1 {
+            return Box::new(
+                (self.head.clone(), self.tail.clone())
+                    .shrink()
+                    .map(|(h, t)| h.mtch().extend(t)),
+            )
+        }
+        empty_shrinker()
     }
 }
 
@@ -311,7 +314,7 @@ fn pat_parses_some() {
     //         DeconsOp::App(Pat::Struc(
     //             Name::id("Sym2")
     //                 .sym()
-    //                 .mtch()
+    //                 .mtch()arb
     //                 .push(DeconsOp::App(Pat::Struc(Lit::int(1).mtch())))
     //         )),
     //         DeconsOp::App(Pat::blank()),
