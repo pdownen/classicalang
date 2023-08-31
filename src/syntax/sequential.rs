@@ -16,7 +16,7 @@ pub(crate) trait PrettyPrint {
     }
 }
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Name {
     pub id: String,
 }
@@ -47,17 +47,7 @@ impl PrettyPrint for Name {
 
 impl fmt::Display for Name {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let allocator: Arena<'_, ()> = pretty::Arena::new();
-        let doc = allocator.text(&self.id);
-        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
-    }
-}
-
-impl fmt::Debug for Name {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let allocator: Arena<'_, ()> = pretty::Arena::new();
-        let doc = allocator.text(&self.id);
-        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
+        self.pretty_fmt(f)
     }
 }
 
@@ -140,27 +130,7 @@ impl PrettyPrint for Decl {
 
 impl fmt::Display for Decl {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Decl::Include(e) => write!(f, "include {}", e),
-            Decl::Method(q, e) => {
-                let doc: RcDoc<'_> = RcDoc::text(q.to_string())
-                    .append(RcDoc::text(" -> "))
-                    .append(RcDoc::line())
-                    .append(RcDoc::text(e.to_string()))
-                    .nest(INDENTATION_WIDTH)
-                    .group();
-                write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
-            }
-            Decl::Bind(p, e) => {
-                let doc: RcDoc<'_> = RcDoc::text(p.to_string())
-                    .append(RcDoc::text(" <- "))
-                    .append(RcDoc::text(e.to_string()))
-                    .append(RcDoc::line())
-                    .nest(INDENTATION_WIDTH)
-                    .group();
-                write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
-            }
-        }
+        self.pretty_fmt(f)
     }
 }
 
@@ -279,62 +249,19 @@ impl PrettyPrint for ExprOp {
 
 impl fmt::Display for ExprHead {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let doc = match self {
-            ExprHead::Var(x) => RcDoc::<()>::text(x.to_string()),
-            ExprHead::Const(c) => RcDoc::<()>::text(c.to_string()),
-            ExprHead::Lambda(l) => {
-                let indented_l = l
-                    .defns
-                    .iter()
-                    .map(|d| RcDoc::<()>::text(format!("{};", d)))
-                    .map(|doc| doc)
-                    .collect::<Vec<_>>();
-
-                let mut formatted_indented_l = RcDoc::<()>::nil();
-                for (index, line) in indented_l.iter().enumerate() {
-                    if index > 0 {
-                        formatted_indented_l = formatted_indented_l.append(RcDoc::<()>::hardline());
-                    }
-                    formatted_indented_l = formatted_indented_l.append(line.clone());
-                }
-
-                RcDoc::<()>::text("{")
-                    .append(
-                        RcDoc::<()>::line_()
-                            .append(formatted_indented_l)
-                            .nest(INDENTATION_WIDTH)
-                            .group(),
-                    )
-                    .append(RcDoc::<()>::line())
-                    .append(RcDoc::<()>::text("}"))
-            }
-        };
-        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
+        self.pretty_fmt(f)
     }
 }
 
 impl fmt::Display for ExprOp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let doc = match self {
-            ExprOp::App(a) if a.is_atomic() => RcDoc::<()>::text(format!(" {}", a)),
-            ExprOp::App(a) => RcDoc::<()>::text(format!("({})", a)),
-            ExprOp::Dot(m) => RcDoc::<()>::text(format!(".{}", m)),
-        };
-        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
+        self.pretty_fmt(f)
     }
 }
 
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let head_str = self.head.to_string();
-        let head_doc: RcDoc<'_> = RcDoc::text(&head_str);
-        let op_docs: Vec<RcDoc<'_>> = self
-            .tail
-            .iter()
-            .map(|op| RcDoc::line().append(op.to_doc()))
-            .collect();
-        let doc = RcDoc::concat(vec![head_doc].into_iter().chain(op_docs));
-        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
+        self.pretty_fmt(f)
     }
 }
 
@@ -413,13 +340,7 @@ impl PrettyPrint for Lit {
 
 impl fmt::Display for Lit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let doc = match self {
-            Lit::Int(i) => RcDoc::<()>::text(i.to_string()),
-            Lit::Flt(n) => RcDoc::<()>::text(format!("{:?}", n)),
-            Lit::Str(s) => RcDoc::<()>::text(format!("{:?}", s)),
-            Lit::Sym(s) => RcDoc::<()>::text(s.to_string()),
-        };
-        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
+        self.pretty_fmt(f)
     }
 }
 
@@ -494,23 +415,13 @@ impl PrettyPrint for CopatOp {
 
 impl fmt::Display for CopatOp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let doc = match self {
-            CopatOp::App(p) if p.is_atomic() => RcDoc::<()>::text(format!(" {}", p)),
-            CopatOp::App(p) => RcDoc::<()>::text(format!("({})", p)),
-            CopatOp::Dot(c) => RcDoc::<()>::text(format!(".{}", c)),
-        };
-        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
+        self.pretty_fmt(f)
     }
 }
 
 impl fmt::Display for Copat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut doc: RcDoc<'_, ()> = RcDoc::nil();
-        doc = doc.append(RcDoc::text(self.head.to_string()));
-        for op in &self.tail {
-            doc = doc.append(RcDoc::text(op.to_string()));
-        }
-        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
+        self.pretty_fmt(f)
     }
 }
 
@@ -573,11 +484,7 @@ impl PrettyPrint for Pat {
 
 impl fmt::Display for Pat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let doc = match self {
-            Pat::Atom(a) => RcDoc::<()>::text(a.to_string()),
-            Pat::Struc(s) => RcDoc::<()>::text(s.to_string()),
-        };
-        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
+        self.pretty_fmt(f)
     }
 }
 
@@ -611,12 +518,7 @@ impl PrettyPrint for AtomicPat {
 
 impl fmt::Display for AtomicPat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let doc = match self {
-            AtomicPat::Unused => RcDoc::<()>::text("_"),
-            AtomicPat::Var(x) => RcDoc::<()>::text(x.to_string()),
-            AtomicPat::Const(c) => RcDoc::<()>::text(c.to_string()),
-        };
-        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
+        self.pretty_fmt(f)
     }
 }
 
@@ -665,21 +567,12 @@ impl PrettyPrint for DeconsOp {
 
 impl fmt::Display for DeconsOp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let doc = match self {
-            DeconsOp::App(p) if p.is_atomic() => RcDoc::<()>::text(format!(" {}", p)),
-            DeconsOp::App(p) => RcDoc::<()>::text(format!("({})", p)),
-        };
-        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
+        self.pretty_fmt(f)
     }
 }
 
 impl fmt::Display for Decons {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut doc: RcDoc<'_, ()> = RcDoc::nil();
-        doc = doc.append(RcDoc::text(self.head.to_string()));
-        for op in &self.tail {
-            doc = doc.append(RcDoc::text(op.to_string()));
-        }
-        write!(f, "{}", doc.pretty(MAX_LINE_WIDTH))
+        self.pretty_fmt(f)
     }
 }
