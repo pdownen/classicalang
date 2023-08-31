@@ -10,7 +10,7 @@ use crate::{
     parsing::parse::*,
     syntax::sequential::{
         AtomicPat, Copat, CopatOp, Decl, Decons, DeconsOp, Expr, ExprHead, ExprOp, Lit, Modul,
-        Name, Pat,
+        Name, Pat, PrettyPrint, MAX_LINE_WIDTH,
     },
 };
 use quickcheck::{empty_shrinker, Arbitrary, Gen, TestResult};
@@ -72,7 +72,7 @@ impl Arbitrary for Name {
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         match self.id.len() {
             0 | 1 => empty_shrinker(),
-            _ => Box::new(self.id.shrink().map(|s| Name { id: s }))
+            _ => Box::new(self.id.shrink().map(|s| Name { id: s })),
         }
     }
 }
@@ -101,7 +101,7 @@ impl Arbitrary for Lit {
             Lit::Str(s) => Box::new(s.shrink().map(Lit::str)),
             Lit::Sym(sym) => match sym.id.len() {
                 0 | 1 => empty_shrinker(),
-                _ => Box::new(sym.shrink().map(Lit::Sym))
+                _ => Box::new(sym.shrink().map(Lit::Sym)),
             },
         }
     }
@@ -176,8 +176,13 @@ fn lit_parses(literal: Lit, printer: impl Fn(&Lit) -> String) -> bool {
 }
 
 #[quickcheck]
-fn lit_parses_all(lit: Lit) -> bool {
+fn lit_parses_basic(lit: Lit) -> bool {
     lit_parses(lit, |l| l.to_string())
+}
+
+#[quickcheck]
+fn lit_parses_pretty(lit: Lit) -> bool {
+    lit_parses(lit, |l| l.to_pretty(MAX_LINE_WIDTH))
 }
 
 #[test]
@@ -186,12 +191,21 @@ fn lit_parses_some() {
 
     assert!(lit_parses(Lit::int(0), format_printer));
     assert!(lit_parses(Lit::int(25), format_printer));
-    assert!(lit_parses(Lit::flt(0.0),format_printer));
+    assert!(lit_parses(Lit::flt(0.0), format_printer));
     assert!(lit_parses(Lit::flt(0.0001235), format_printer));
-    assert!(lit_parses(Lit::str("!!@  #### rZ".to_owned()), format_printer));
-    assert!(lit_parses(Lit::str(r#"\\ \" \\"#.to_owned()), format_printer));
+    assert!(lit_parses(
+        Lit::str("!!@  #### rZ".to_owned()),
+        format_printer
+    ));
+    assert!(lit_parses(
+        Lit::str(r#"\\ \" \\"#.to_owned()),
+        format_printer
+    ));
     assert!(lit_parses(Lit::sym(Name::id("Symbol")), format_printer));
-    assert!(lit_parses(Lit::sym(Name::id("Symbolic_name2")), format_printer));
+    assert!(lit_parses(
+        Lit::sym(Name::id("Symbolic_name2")),
+        format_printer
+    ));
 }
 
 impl Arbitrary for Decons {
@@ -247,7 +261,7 @@ impl Arbitrary for AtomicPat {
             AtomicPat::Unused => empty_shrinker(),
             AtomicPat::Var(v) => match v.id.len() {
                 0 | 1 => empty_shrinker(),
-                _ => Box::new(v.shrink().map(AtomicPat::Var))
+                _ => Box::new(v.shrink().map(AtomicPat::Var)),
             },
             AtomicPat::Const(c) => Box::new(c.shrink().map(AtomicPat::Const)),
         }
@@ -281,8 +295,13 @@ fn pat_parses(pattern: Pat, printer: impl Fn(&Pat) -> String) -> bool {
 }
 
 #[quickcheck]
-fn pat_parses_all(pat: Pat) -> bool {
+fn pat_parses_basic(pat: Pat) -> bool {
     pat_parses(pat, |p| p.to_string())
+}
+
+#[quickcheck]
+fn pat_parses_all(pat: Pat) -> bool {
+    pat_parses(pat, |p| p.to_pretty(MAX_LINE_WIDTH))
 }
 
 #[test]
@@ -299,7 +318,6 @@ fn pat_parses_some() {
     //         DeconsOp::App(Pat::blank())
     //     ])
     // ), |p| p.to_string()));
-    
 }
 
 impl Arbitrary for CopatOp {
@@ -315,8 +333,7 @@ impl Arbitrary for CopatOp {
                 if let Lit::Sym(_) = lit.clone() {
                     return CopatOp::Dot(lit);
                 }
-            }
-            
+            },
         }
     }
 
@@ -357,8 +374,13 @@ fn copat_parses(copattern: Copat, printer: impl Fn(&Copat) -> String) -> bool {
 }
 
 #[quickcheck]
-fn copat_parses_all(copat: Copat) -> bool {
+fn copat_parses_basic(copat: Copat) -> bool {
     copat_parses(copat, |c| c.to_string())
+}
+
+#[quickcheck]
+fn copat_parses_pretty(copat: Copat) -> bool {
+    copat_parses(copat, |c| c.to_pretty(MAX_LINE_WIDTH))
 }
 
 #[test]
@@ -376,7 +398,7 @@ fn copat_parses_some() {
 impl Arbitrary for ExprHead {
     fn arbitrary(g: &mut Gen) -> Self {
         match u32::arbitrary(g) % 7 {
-            0 | 1 | 2  => {
+            0 | 1 | 2 => {
                 let mut c: char = char::arbitrary(g);
                 while !c.is_ascii_alphabetic() {
                     c = char::arbitrary(g);
@@ -389,14 +411,13 @@ impl Arbitrary for ExprHead {
                 while let Lit::Flt(x) = lit {
                     if x.is_infinite() {
                         lit = Lit::arbitrary(g);
-                    }
-                    else {
-                        break
+                    } else {
+                        break;
                     }
                 }
 
                 ExprHead::Const(lit)
-            },
+            }
             _ => ExprHead::Lambda(Modul::arbitrary(g)),
         }
     }
@@ -404,8 +425,8 @@ impl Arbitrary for ExprHead {
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         match self {
             ExprHead::Var(v) => match v.id.len() {
-                    0 | 1 => empty_shrinker(),
-                    _ => Box::new(v.shrink().map(ExprHead::Var))
+                0 | 1 => empty_shrinker(),
+                _ => Box::new(v.shrink().map(ExprHead::Var)),
             },
             ExprHead::Const(l) => Box::new(l.shrink().map(ExprHead::Const)),
             ExprHead::Lambda(m) => Box::new(m.shrink().map(ExprHead::Lambda)),
@@ -467,8 +488,13 @@ fn expr_parses(expression: Expr, printer: impl Fn(&Expr) -> String) -> bool {
 }
 
 #[quickcheck]
-fn expr_parses_all(expr: Expr) -> bool {
+fn expr_parses_basic(expr: Expr) -> bool {
     expr_parses(expr, |e| e.to_string())
+}
+
+#[quickcheck]
+fn expr_parses_pretty(expr: Expr) -> bool {
+    expr_parses(expr, |e| e.to_pretty(MAX_LINE_WIDTH))
 }
 
 #[test]
@@ -514,8 +540,13 @@ fn decl_parses(declaration: Decl, printer: impl Fn(&Decl) -> String) -> bool {
 }
 
 #[quickcheck]
-fn decl_parses_all(decl: Decl) -> bool {
+fn decl_parses_basic(decl: Decl) -> bool {
     decl_parses(decl, |p| p.to_string())
+}
+
+#[quickcheck]
+fn decl_parses_pretty(decl: Decl) -> bool {
+    decl_parses(decl, |p| p.to_pretty(MAX_LINE_WIDTH))
 }
 
 #[test]
@@ -566,19 +597,26 @@ fn modul_parses(module: Modul, printer: impl Fn(&Modul) -> String) -> bool {
 
     match parsed {
         Ok((v, _s)) => {
-        println!("{module}{module:?}
-            parses as\n{}{v:?}\n", printer(&v)
-        );
+            println!(
+                "{module}{module:?}
+            parses as\n{}{v:?}\n",
+                printer(&v)
+            );
 
             v == module
-        },
+        }
         Err(_) => false,
     }
 }
 
 #[quickcheck]
-fn modul_parses_all(modul: Modul) -> bool {
+fn modul_parses_basic(modul: Modul) -> bool {
     modul_parses(modul, |m| m.to_string())
+}
+
+#[quickcheck]
+fn modul_parses_pretty(modul: Modul) -> bool {
+    modul_parses(modul, |m| m.to_pretty(MAX_LINE_WIDTH))
 }
 
 fn modul_parser_parses_str(str: &str) -> bool {
@@ -622,35 +660,46 @@ fn modul_parses_some() {
         "
             )
             .map(|(v, _s)| v),
-        Ok(
-            Modul::top().then(
-                Name::id("factorial").bind().this()
-                    .app(Name::id("list").bind().atom()).goes_to(
-                        Name::id("map").refer()
-                            .app(
-                                Modul::top().then(
-                                    Name::id("fact").bind().this()
+        Ok(Modul::top().then(
+            Name::id("factorial")
+                .bind()
+                .this()
+                .app(Name::id("list").bind().atom())
+                .goes_to(
+                    Name::id("map")
+                        .refer()
+                        .app(
+                            Modul::top()
+                                .then(
+                                    Name::id("fact")
+                                        .bind()
+                                        .this()
                                         .app(Lit::int(0).switch().atom())
                                         .goes_to(Lit::int(1).cnst())
                                 )
                                 .then(
-                                    Name::id("fact").bind().this()
+                                    Name::id("fact")
+                                        .bind()
+                                        .this()
                                         .app(Name::id("n").bind().atom())
                                         .goes_to(
-                                            Name::id("times").refer().app(Name::id("n").refer()).app(
-                                                Name::id("fact").refer().app(
-                                                    Name::id("minus").refer()
-                                                        .app(Name::id("n").refer())
-                                                        .app(Lit::int(1).cnst())
+                                            Name::id("times")
+                                                .refer()
+                                                .app(Name::id("n").refer())
+                                                .app(
+                                                    Name::id("fact").refer().app(
+                                                        Name::id("minus")
+                                                            .refer()
+                                                            .app(Name::id("n").refer())
+                                                            .app(Lit::int(1).cnst())
+                                                    )
                                                 )
-                                            )
                                         )
                                 )
                                 .lambda()
-                            )
-                            .app(Name::id("list").refer())
-                    )
-            )
-        )
+                        )
+                        .app(Name::id("list").refer())
+                )
+        ))
     );
 }
