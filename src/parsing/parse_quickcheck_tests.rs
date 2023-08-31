@@ -472,11 +472,14 @@ impl Arbitrary for Expr {
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        Box::new(
-            (self.head.clone(), self.tail.clone())
-                .shrink()
-                .map(|(h, t)| h.head().extend(t)),
-        )
+        if self.tail.len() > 1 {
+            return Box::new(
+                (self.head.clone(), self.tail.clone())
+                    .shrink()
+                    .map(|(h, t)| h.head().extend(t)),
+            )
+        }
+        empty_shrinker()
     }
 }
 
