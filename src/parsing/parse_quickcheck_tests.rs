@@ -75,7 +75,11 @@ impl Arbitrary for Name {
             _ => Box::new(
                 self.id
                     .shrink()
-                    .filter(|s| s.len() > 0 && s.starts_with(|c: char| c.is_alphabetic()))
+                    .filter(|s| {
+                        s.len() > 0
+                            && s.starts_with(|c: char| c.is_alphabetic())
+                            && s.chars().all(|c| c.is_alphanumeric() || c == '_')
+                    })
                     .map(|s| Name { id: s }),
             ),
         }
@@ -234,7 +238,7 @@ impl Arbitrary for Decons {
                 (self.head.clone(), self.tail.clone())
                     .shrink()
                     .map(|(h, t)| h.mtch().extend(t)),
-            )
+            );
         }
         empty_shrinker()
     }
@@ -494,7 +498,7 @@ impl Arbitrary for Expr {
                 (self.head.clone(), self.tail.clone())
                     .shrink()
                     .map(|(h, t)| h.head().extend(t)),
-            )
+            );
         }
         empty_shrinker()
     }
