@@ -23,6 +23,9 @@ pub struct Name {
 
 impl Name {
     pub fn id(s: &str) -> Name {
+        if s.is_empty() {
+            panic!("Empty identfier name: {}", s);
+        }
         Name { id: s.to_string() }
     }
 
