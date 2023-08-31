@@ -52,7 +52,7 @@ impl Arbitrary for Name {
     fn arbitrary(g: &mut Gen) -> Name {
         let mut name = {
             let mut c: char = char::arbitrary(g);
-            while !c.is_ascii_alphabetic() && c != '_' {
+            while !c.is_ascii_alphabetic() {
                 c = char::arbitrary(g);
             }
             c.to_string()
@@ -72,7 +72,12 @@ impl Arbitrary for Name {
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         match self.id.len() {
             0 | 1 => empty_shrinker(),
-            _ => Box::new(self.id.shrink().map(|s| Name { id: s })),
+            _ => Box::new(
+                self.id
+                    .shrink()
+                    .filter(|s| s.len() > 0 && s.starts_with(|c: char| c.is_alphabetic()))
+                    .map(|s| Name { id: s }),
+            ),
         }
     }
 }
@@ -99,9 +104,13 @@ impl Arbitrary for Lit {
             Lit::Int(i) => Box::new(i.shrink().map(Lit::int)),
             Lit::Flt(f) => Box::new(f.shrink().map(Lit::flt)),
             Lit::Str(s) => Box::new(s.shrink().map(Lit::str)),
-            Lit::Sym(sym) => match sym.id.len() {
+            Lit::Sym(s) => match s.id.len() {
                 0 | 1 => empty_shrinker(),
-                _ => Box::new(sym.shrink().map(Lit::Sym)),
+                _ => Box::new(
+                    s.shrink()
+                        .filter(|n| n.id.starts_with(|c: char| c.is_uppercase()))
+                        .map(|n| n.sym()),
+                ),
             },
         }
     }
@@ -264,7 +273,11 @@ impl Arbitrary for AtomicPat {
             AtomicPat::Unused => empty_shrinker(),
             AtomicPat::Var(v) => match v.id.len() {
                 0 | 1 => empty_shrinker(),
-                _ => Box::new(v.shrink().map(AtomicPat::Var)),
+                _ => Box::new(
+                    v.shrink()
+                        .filter(|n| n.id.starts_with(|c: char| c.is_lowercase()))
+                        .map(|n| n.bind()),
+                ),
             },
             AtomicPat::Const(c) => Box::new(c.shrink().map(AtomicPat::Const)),
         }
@@ -429,7 +442,11 @@ impl Arbitrary for ExprHead {
         match self {
             ExprHead::Var(v) => match v.id.len() {
                 0 | 1 => empty_shrinker(),
-                _ => Box::new(v.shrink().map(ExprHead::Var)),
+                _ => Box::new(
+                    v.shrink()
+                        .filter(|n| n.id.starts_with(|c: char| c.is_lowercase()))
+                        .map(ExprHead::Var),
+                ),
             },
             ExprHead::Const(l) => Box::new(l.shrink().map(ExprHead::Const)),
             ExprHead::Lambda(m) => Box::new(m.shrink().map(ExprHead::Lambda)),

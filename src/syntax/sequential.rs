@@ -23,22 +23,31 @@ pub struct Name {
 
 impl Name {
     pub fn id(s: &str) -> Name {
-        if s.is_empty() {
+        if s.is_empty() || !s.starts_with(|c: char| c.is_alphabetic()) {
             panic!("Empty identfier name: {}", s);
         }
         Name { id: s.to_string() }
     }
 
     pub fn sym(self) -> Lit {
-        Lit::Sym(self)
+        match self.id.chars().nth(0) {
+            Some(c) if c.is_alphabetic() && c.is_uppercase() => Lit::Sym(self),
+            _ => panic!("Invalid symbol name: {}", self.id),
+        }
     }
 
     pub fn refer(self) -> Expr {
-        ExprHead::Var(self).head()
+        match self.id.chars().nth(0) {
+            Some(c) if c.is_alphabetic() && c.is_lowercase() => ExprHead::Var(self).head(),
+            _ => panic!("Invalid referenced variable name: {}", self.id),
+        }
     }
 
     pub fn bind(self) -> AtomicPat {
-        AtomicPat::Var(self)
+        match self.id.chars().nth(0) {
+            Some(c) if c.is_alphabetic() && c.is_lowercase() => AtomicPat::Var(self),
+            _ => panic!("Invalid bound variable name: {}", self.id),
+        }
     }
 }
 
