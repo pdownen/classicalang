@@ -65,7 +65,7 @@ where
                 Some((e, expn)) => format!("{s1}.{s2}{e}{expn}"),
             },
         )
-        .or(float_specials())
+        // .or(float_specials())
 }
 
 pub fn float<I>() -> impl Parser<I, Output = f64>
@@ -127,6 +127,7 @@ where
     char('_')
 }
 
+// check about keywords 
 pub fn variable<I>() -> impl Parser<I, Output = Name>
 where
     I: Stream<Token = char>,
