@@ -275,43 +275,41 @@ fn decl_test() {
     );
 }
 
-// #[test]
-// fn modul_test() {
-//     let input = "
-//         include Symbol;
-//         x <- 1;
-//         y <- 2;
-//         fuzz x y -> fn x y
-//     ";
+#[test]
+fn modul_test() {
+    let input = "
+        include Symbol;
+        x <- 1;
+        y <- 2;
+        fuzz x y -> fn x y;
+    ";
 
-//     let expected_defns = vec![
-//         Decl::Include(Name::id("Symbol").sym().cnst()),
-//         Decl::Bind(Name::id("x").bind().atom(), Lit::Int(1).cnst()),
-//         Decl::Bind(Name::id("y").bind().atom(), Lit::Int(2).cnst()),
-//         Decl::Method(
-//             Name::id("fuzz").bind().this()
-//                 .app(Name::id("x").bind().atom())
-//                 .app(Name::id("y").bind().atom()), 
-//             Name::id("fuzz").bind().this()
-//                 .app(Name::id("x").bind().atom())
-//                 .app(Name::id("y").bind().atom())
-//                 .decons(),
+    let expected_defns = vec![
+        Decl::Include(Name::id("Symbol").sym().cnst()),
+        Decl::Bind(Name::id("x").bind().atom(), Lit::Int(1).cnst()),
+        Decl::Bind(Name::id("y").bind().atom(), Lit::Int(2).cnst()),
+        Name::id("fuzz").bind().this()
+            .app(Name::id("x").bind().atom())
+            .app(Name::id("y").bind().atom())
+        .goes_to(
+        Name::id("fn").refer()
+            .app(Name::id("x").refer())
+            .app(Name::id("y").refer())
+        )
+    ];
 
-//         )
-//     ];
+    let result = whole_input(modul()).easy_parse(input);
 
-//     let result = whole_input(modul()).easy_parse(input);
+    match result {
+        Ok((parsed_modul, _)) => {
+            assert_eq!(parsed_modul.defns.len(), expected_defns.len());
 
-//     match result {
-//         Ok((parsed_modul, _)) => {
-//             assert_eq!(parsed_modul.defns.len(), expected_defns.len());
-
-//             for (parsed_decl, expected_decl) in parsed_modul.defns.iter().zip(&expected_defns) {
-//                 assert_eq!(parsed_decl, expected_decl);
-//             }
-//         }
-//         Err(err) => {
-//             panic!("Parsing error: {:?}", err);
-//         }
-//     }
-// }
+            for (parsed_decl, expected_decl) in parsed_modul.defns.iter().zip(&expected_defns) {
+                assert_eq!(parsed_decl, expected_decl);
+            }
+        }
+        Err(err) => {
+            panic!("Parsing error: {:?}", err);
+        }
+    }
+}
