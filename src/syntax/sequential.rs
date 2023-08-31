@@ -47,7 +47,7 @@ impl PrettyPrint for Name {
 
 impl fmt::Display for Name {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.pretty_fmt(f)
+        write!(f, "{}", self.id)
     }
 }
 
@@ -89,7 +89,10 @@ impl PrettyPrint for Modul {
 
 impl fmt::Display for Modul {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.pretty_fmt(f)
+        for d in &self.defns {
+            writeln!(f, "{};", d)?;
+        }
+        Ok(())
     }
 }
 
@@ -130,7 +133,11 @@ impl PrettyPrint for Decl {
 
 impl fmt::Display for Decl {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.pretty_fmt(f)
+        match self {
+            Decl::Include(e) => write!(f, "include {}", e),
+            Decl::Method(q, e) => write!(f, "{} -> {}", q, e),
+            Decl::Bind(p, e) => write!(f, "{} <- {}", p, e),
+        }
     }
 }
 
@@ -249,19 +256,32 @@ impl PrettyPrint for ExprOp {
 
 impl fmt::Display for ExprHead {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.pretty_fmt(f)
+        match self {
+            ExprHead::Var(x) => write!(f, "{}", x),
+            ExprHead::Const(c) => write!(f, "{}", c),
+            ExprHead::Lambda(l) => write!(f, "{{{l}}}"),
+        }
     }
 }
 
 impl fmt::Display for ExprOp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.pretty_fmt(f)
+        match self {
+            ExprOp::App(a) => write!(f, "({})", a),
+            ExprOp::Dot(m) => write!(f, ".{}", m),
+        }
     }
 }
 
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.pretty_fmt(f)
+        write!(f, "{}", self.head)?;
+
+        for op in &self.tail {
+            write!(f, "{}", op)?
+        }
+
+        Ok(())
     }
 }
 
@@ -340,7 +360,12 @@ impl PrettyPrint for Lit {
 
 impl fmt::Display for Lit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.pretty_fmt(f)
+        match self {
+            Lit::Int(i) => write!(f, "{}", i),
+            Lit::Flt(n) => write!(f, "{:?}", n),
+            Lit::Str(s) => write!(f, "{:?}", s),
+            Lit::Sym(s) => write!(f, "{}", s),
+        }
     }
 }
 
@@ -415,13 +440,22 @@ impl PrettyPrint for CopatOp {
 
 impl fmt::Display for CopatOp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.pretty_fmt(f)
+        match self {
+            CopatOp::App(p) => write!(f, "({})", p),
+            CopatOp::Dot(c) => write!(f, ".{}", c),
+        }
     }
 }
 
 impl fmt::Display for Copat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.pretty_fmt(f)
+        write!(f, "{}", self.head)?;
+
+        for op in &self.tail {
+            write!(f, "{}", op)?
+        }
+
+        Ok(())
     }
 }
 
@@ -484,7 +518,10 @@ impl PrettyPrint for Pat {
 
 impl fmt::Display for Pat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.pretty_fmt(f)
+        match self {
+            Pat::Atom(a) => write!(f, "{}", a),
+            Pat::Struc(s) => write!(f, "{}", s),
+        }
     }
 }
 
@@ -518,7 +555,11 @@ impl PrettyPrint for AtomicPat {
 
 impl fmt::Display for AtomicPat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.pretty_fmt(f)
+        match self {
+            AtomicPat::Unused => write!(f, "_"),
+            AtomicPat::Var(x) => write!(f, "{}", x),
+            AtomicPat::Const(c) => write!(f, "{}", c),
+        }
     }
 }
 
@@ -567,12 +608,20 @@ impl PrettyPrint for DeconsOp {
 
 impl fmt::Display for DeconsOp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.pretty_fmt(f)
+        match self {
+            DeconsOp::App(p) => write!(f, "({})", p),
+        }
     }
 }
 
 impl fmt::Display for Decons {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.pretty_fmt(f)
+        write!(f, "{}", self.head)?;
+
+        for op in &self.tail {
+            write!(f, "{}", op)?
+        }
+
+        Ok(())
     }
 }
