@@ -7,6 +7,6 @@ This code so far is the result of an REU in the summer of 2023, and includes a p
 
 Contributors:
 
-Christian Chung
-Gabriel Shahrouzi
-Paul Downen
+* Christian Chung
+* Gabriel Shahrouzi
+* Paul Downen
